@@ -1,19 +1,49 @@
-name: Release
+name: CI & Release
 
-# Build the plugin archive and publish it as a GitHub Release asset when a version tag is pushed.
-# Release ZIPs are NOT committed to the repository (see .gitignore).
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
 
 permissions:
   contents: write
 
 jobs:
-  package:
+  test:
+    name: Run Unit Tests & Linting
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit test suite
+        run: npm test
+
+      - name: Setup PHP for linting
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+
+      - name: Lint PHP files & test origin parsing
+        run: |
+          find . -name '*.php' -not -path './node_modules/*' -print0 | xargs -0 -n1 php -l
+          bash test/embed-origin.sh
+
+  release:
+    name: Package & Publish GitHub Release
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

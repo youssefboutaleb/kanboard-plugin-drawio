@@ -110,7 +110,7 @@ var KBDrawioMarkdown = (function () {
             match = QUOTE_MARKER.exec(text);
         }
 
-        return {text: text, depth: depth};
+        return { text: text, depth: depth };
     }
 
     function finalize(fence) {

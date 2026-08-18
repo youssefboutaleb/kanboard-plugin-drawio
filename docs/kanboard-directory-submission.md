@@ -5,10 +5,21 @@ the `plugins.json` file in the [`kanboard/website`](https://github.com/kanboard/
 repository and is what powers <https://kanboard.org/plugins.html> and Kanboard's in-app
 plugin installer.
 
-> **Nothing here has been submitted.** No pull request has been opened and no release has
-> been published. This document is the prepared package; a maintainer performs the steps.
-> Milestone 3 in [`CLAUDE.md`](../CLAUDE.md) must be complete first — in particular the
-> manual browser pass over the draw.io round trip.
+> **State: `v0.1.0` is published, `v0.1.1` is prepared but not yet tagged, and nothing is
+> submitted to the directory.**
+>
+> `v0.1.0` was released on 2026-08-18 — tag, GitHub release and `Drawio-0.1.0.zip` all
+> exist, the download URL returns HTTP 200, the archive holds 15 files under a `Drawio/`
+> root, and its code is byte-identical to `main`. Its bundled README, however, predates
+> Milestone 4 Task 20 and still carries the public-views limitation that task disproved.
+>
+> `v0.1.1` is therefore the version to list: documentation only, no code change. Everything
+> in this dossier points at it. The maintainer commits and tags; CI builds and publishes the
+> asset.
+>
+> No pull request has been opened against `kanboard/website`, so the plugin is not listed —
+> confirmed against the live file on 2026-08-18: 158 entries, case-insensitively ordered,
+> no `Drawio`, insertion point between `DiscordNotifier` and `duedate` unchanged.
 
 ---
 
@@ -36,7 +47,9 @@ so all four must match exactly — including case.
 
 ## 4. Current version
 
-`0.1.0` — declared by `Plugin::getPluginVersion()`, the single source of truth.
+`0.1.1` — declared by `Plugin::getPluginVersion()`, the single source of truth.
+`0.1.0` was published first and remains on the releases page; `0.1.1` is a
+documentation-only successor (see `CHANGELOG.md`) and is the version to list.
 `scripts/package-plugin.sh` reads the version from there, and `CHANGELOG.md` must agree.
 
 ## 5. License
@@ -69,17 +82,17 @@ Verified against Kanboard v1.2.53 (current release at time of writing) with Pars
 
 ## 7. Release URL
 
-    https://github.com/youssefboutaleb/kanboard-plugin-drawio/releases/tag/v0.1.0
+    https://github.com/youssefboutaleb/kanboard-plugin-drawio/releases/tag/v0.1.1
 
 ## 8. Download ZIP URL
 
-    https://github.com/youssefboutaleb/kanboard-plugin-drawio/releases/download/v0.1.0/Drawio-0.1.0.zip
+    https://github.com/youssefboutaleb/kanboard-plugin-drawio/releases/download/v0.1.1/Drawio-0.1.1.zip
 
 This is the release **asset** built by `scripts/package-plugin.sh`, not a GitHub source
 archive. The distinction is mandatory: the `kanboard/website` README explicitly warns that
 GitHub archive URLs "create incorrect directory structures". A source archive would extract
-to `kanboard-plugin-drawio-0.1.0/`, which Kanboard would try to load as a plugin named
-`Kanboard-plugin-drawio-0.1.0` — the class would not resolve and the plugin would never
+to `kanboard-plugin-drawio-0.1.1/`, which Kanboard would try to load as a plugin named
+`Kanboard-plugin-drawio-0.1.1` — the class would not resolve and the plugin would never
 load.
 
 The built asset extracts to `Drawio/`, and the packaging script fails the build if the
@@ -104,7 +117,7 @@ are required.
         "author": "Youssef BOUTALEB",
         "compatible_version": ">=1.2.20",
         "description": "Draw.io diagrams inside Kanboard Markdown. A fenced block tagged \"diagram\" is displayed as the diagram it describes, with an Edit action wherever Kanboard offers one for the surrounding text, and the Markdown toolbar gains an Insert diagram button that opens the draw.io editor. The Markdown field is the only storage: no database table, no document system, no separate permission model. The payload format is compatible with Wiki.js, so existing diagrams move between the two unchanged.",
-        "download": "https://github.com/youssefboutaleb/kanboard-plugin-drawio/releases/download/v0.1.0/Drawio-0.1.0.zip",
+        "download": "https://github.com/youssefboutaleb/kanboard-plugin-drawio/releases/download/v0.1.1/Drawio-0.1.1.zip",
         "has_hooks": true,
         "has_overrides": false,
         "has_schema": false,
@@ -115,7 +128,7 @@ are required.
         "readme": "https://github.com/youssefboutaleb/kanboard-plugin-drawio/blob/main/README.md",
         "remote_install": true,
         "title": "Draw.io Diagrams",
-        "version": "0.1.0"
+        "version": "0.1.1"
     },
 ```
 
@@ -168,7 +181,7 @@ diagram it describes, with an Edit action, and the Markdown toolbar gains an Ins
 diagram button that opens the draw.io editor.
 
 - **Repository:** https://github.com/youssefboutaleb/kanboard-plugin-drawio
-- **Release:** https://github.com/youssefboutaleb/kanboard-plugin-drawio/releases/tag/v0.1.0
+- **Release:** https://github.com/youssefboutaleb/kanboard-plugin-drawio/releases/tag/v0.1.1
 - **License:** MIT
 - **Compatible with:** Kanboard >= 1.2.20 (requires PHP >= 8.1)
 
@@ -191,16 +204,54 @@ Notes for reviewers:
 
 ## 14. Maintainer considerations
 
+**Why `v0.1.1` exists** *(decision taken 2026-08-18)*
+
+The `v0.1.0` asset ships a README stating that public (token) views render no diagrams.
+Milestone 4 Task 20 disproved that against a live instance; the shipped **code** is
+identical to `main`, so this is a documentation defect in one artifact. With 0 downloads
+and no directory entry yet, the cheapest honest fix is a documentation-only `v0.1.1`, so
+that the first archive anyone installs from the directory is accurate.
+
+Rejected: re-uploading a corrected asset onto the existing `v0.1.0` tag. It rewrites a
+published release, and Kanboard's installer keys updates off the version number, so the
+same version with different contents would be invisible to it. `v0.1.0` stays on the
+releases page — nothing about it is unsafe, only one paragraph of its README is wrong.
+
+**Steps for the maintainer**
+
+1. Review the working tree: `Plugin.php` (`0.1.1`), `CHANGELOG.md`, `package.json` and
+   §4/§7/§8/§10/§13 of this dossier moved together, and `test/release-metadata.test.js`
+   fails the suite if any of them drifts apart again.
+2. `bash scripts/agent-verify.sh` — expect **74 tests**, six steps green.
+3. Commit, then `git tag v0.1.1 && git push origin main --tags`. The CI release job builds
+   and attaches `Drawio-0.1.1.zip`; `dist/` is gitignored and is not what gets published.
+4. Confirm the §8 URL returns HTTP 200 once that job finishes, and that the archive's root
+   entry is `Drawio/`.
+5. Open the `plugins.json` pull request using §11–13.
+
 **Before submitting**
 
-- [ ] Complete Milestone 3 in `CLAUDE.md` — in particular the manual browser pass over the
-      draw.io `init`/`save`/`export` round trip, which the automated suite stubs.
-- [ ] Publish release `v0.1.0` and confirm the asset URL in §8 returns HTTP 200.
-- [ ] Download that asset and install it into a clean Kanboard >= 1.2.20 through the admin
-      UI's remote installer, which is the path `remote_install: true` promises.
-- [ ] Confirm the plugin appears under **Settings → Plugins** with version `0.1.0`.
-- [ ] Confirm a diagram renders and can be edited on that clean install, and that the
+- [x] Complete Milestone 3 in `CLAUDE.md` — the manual browser pass over the draw.io
+      `init`/`save`/`export` round trip, which the automated suite stubs. *(Reported
+      complete by the maintainer; the verdict table in `docs/MANUAL_TESTING.md` §4 is still
+      blank and should be filled in for the record.)*
+- [x] Publish a release and confirm the asset URL returns HTTP 200. *(Verified for
+      `v0.1.0`: published 2026-08-18, `Drawio-0.1.0.zip`, 20597 bytes, root entry
+      `Drawio/`, 15 files. Repeat for `v0.1.1` once tagged — step 4 above.)*
+- [x] Download that asset and install it into a clean Kanboard >= 1.2.20 through the admin
+      UI's remote installer, which is the path `remote_install: true` promises. *(Milestone 3
+      Task 19 installed the packaged artifact into a clean `kanboard/kanboard:v1.2.53`.)*
+- [x] Confirm the plugin appears under **Settings → Extensions** (route `/extensions`, not
+      `/settings/plugins`), in the compatible table rather than the incompatible one.
+      *(Verified showing `0.1.0`; the same check on `0.1.1` is a version string, not new
+      behaviour.)*
+- [x] Confirm a diagram renders and can be edited on that clean install, and that the
       `frame-src` directive is present in the response headers.
+- [ ] Tag `v0.1.1`, then open the `plugins.json` pull request.
+
+The fifteen fields in §10 are re-diffed against `Plugin.php`, `CHANGELOG.md` and
+`package.json` on every run of the test suite by `test/release-metadata.test.js`, so a
+version bump that forgets this file fails the build rather than shipping.
 
 **There is no code review.** The Kanboard documentation states plainly that there is no
 approval process for the directory — a merged PR publishes the entry as-is. Correctness is

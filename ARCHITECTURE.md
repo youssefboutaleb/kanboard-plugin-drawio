@@ -55,6 +55,18 @@ into a write mode (toolbar + textarea) and a preview mode that posts to
 `TaskAjaxController::preview` and injects the rendered HTML. One implementation
 covers all of them.
 
+**Public and read-only surfaces.** `layout.php` skips `vendor.min.js` and
+`app.min.js` when `not_editable` is set — which
+`TaskViewController::readonly()` and `BoardViewController::readonly()` both set —
+but renders `template:layout:css`, `template:layout:js` and
+`template:layout:head` **outside** that guard. The plugin therefore loads on
+public pages with `KB` undefined, which is exactly the wanted behaviour: it
+renders every diagram and offers no action, because `resolveSurface()` finds
+neither a text editor nor an edit link to borrow. Verified against a real capture
+in `test/fixtures/public-task.html`; the public **board** is different again — its
+cards hold no Markdown, and a description reaches it only through a tooltip
+fetched by the Kanboard JavaScript those pages do not load.
+
 **Permissions.** Task and comment editing are authorised by the controllers
 themselves (`ProjectRoleHelper::canUpdateTask()`, the `editable` flag passed to
 `comment/show.php`). Kanboard renders the edit affordance only when the user has
@@ -190,6 +202,7 @@ The whole surface the plugin depends on, in one place:
 | `.comment-actions a.js-modal-medium` | `Asset/js/drawio-ui.js` | A comment's Edit button disappears |
 | `KB.modal`, `KB.on('modal.afterRender')` | `Asset/js/drawio-ui.js` | Edit-from-view stops opening the form |
 | `template:layout:{head,css,js}` hooks | `Plugin.php` | The plugin stops loading |
+| Those hooks sitting outside `layout.php`'s `not_editable` guard | `app/Template/layout.php` | Diagrams stop rendering on public and read-only pages only |
 | `$container['cspRules']` shape | `Plugin.php` | The iframe is blocked by CSP |
 
 Every failure mode is a missing affordance, not corrupted data: the plugin never

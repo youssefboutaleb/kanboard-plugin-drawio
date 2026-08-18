@@ -143,8 +143,22 @@ only the on-disk format is shared.
   Markdown the user did not ask to change.
 - Notification emails contain the Markdown as Kanboard renders it server-side,
   so a diagram appears there as a code block rather than a picture.
-- Public (token) board views load none of Kanboard's JavaScript, so diagrams are
-  not rendered there.
+- The public (token) **board** shows no diagrams: its cards carry no Markdown at
+  all, and a task's description reaches that page only as a tooltip fetched by
+  Kanboard's own JavaScript, which public pages do not load. A public **task**
+  view does render its diagrams — see below.
+
+## Public and read-only views
+
+Diagrams render on the public (token) task view and for any user without edit
+rights. Kanboard withholds its own scripts on `not_editable` pages but attaches
+plugin assets outside that guard, so the plugin loads, renders every diagram as
+an image, and offers no action: the Edit button is borrowed from the edit link
+Kanboard itself renders, and an anonymous reader has none.
+
+`test/public-view.test.js` holds this in place against a real captured page
+(`test/fixtures/public-task.html`, regenerate with
+`bash test/capture-public-view.sh`).
 
 ## Development
 

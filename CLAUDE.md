@@ -51,7 +51,7 @@ the design looks the way it does.
 - [x] **Task 6: Implement deterministic block identification** — ordinal, confirmed
   against the loaded payload, with an unambiguous-payload fallback and a refusal
   otherwise. Nothing is added to the Markdown.
-- [x] **Task 7: Test suite (51 tests)**
+- [x] **Task 7: Test suite (51 tests at the time; 74 today — the count comes from `npm test`)**
   - **Root cause found by the parity fixtures**: blockquoted fences are diagram blocks to
     Parsedown (`TextHelper::reply()` prefixes every line with `> `) but were invisible to
     the JavaScript tokenizer, which silently shifted every ordinal after them. Fixed by
@@ -79,7 +79,7 @@ the design looks the way it does.
 - [x] **Task 15: `docs/specs/`** — spec template plus the retro-spec for the shipped
   Markdown block feature, so the spec-driven loop starts from a worked example.
 
-### Milestone 3: Live Verification & Release Packaging (100% COMPLETE — v0.1.0 packaged, not yet published)
+### Milestone 3: Live Verification & Release Packaging (100% COMPLETE — v0.1.0 published 2026-08-18, not yet listed in the directory)
 
 - [x] **Task 16a: Write the manual browser test checklist** — `docs/MANUAL_TESTING.md`:
       environment setup, a nine-case matrix, a DevTools protocol-inspection guide, a
@@ -152,25 +152,124 @@ the design looks the way it does.
   - The `plugins.json` entry in the dossier parses as strict JSON, carries all fifteen
     fields of the live schema and no others, in alphabetical order, and its
     `compatible_version`, `version`, `author` and `homepage` agree with `Plugin.php`.
-- [ ] **Release publication (maintainer action).** Tag and publish `v0.1.0`, attach
-      `dist/Drawio-0.1.0.zip`, confirm the download URL in the dossier §8 returns 200, then
-      open the `plugins.json` PR. Not done from here: publishing a release and opening a
-      pull request are outward-facing actions for a maintainer, and this repository has no
-      remote configured.
+- [x] **Release publication (maintainer action).** Done by the maintainer on 2026-08-18:
+      `origin` is `github.com/youssefboutaleb/kanboard-plugin-drawio` (the earlier note here
+      claiming no remote was configured is corrected), tag `v0.1.0` is published, and the
+      CI release job attached `Drawio-0.1.0.zip` (20597 bytes, root entry `Drawio/`, 15
+      files, download URL returns 200, 0 downloads so far). **The `plugins.json` PR is still
+      open work** — see Milestone 4 Task 21.
+
+### Milestone 4: Read-path correctness, honest documentation, directory listing (IN PROGRESS)
+
+Sequencing: **20 → 21 → 27** ships the plugin with correct documentation (still v0.1.0 —
+nothing is tagged yet). Then **22 → 24 → 26 → 23** as v0.2.0, with 22 first because it is
+the only item that touches the write path. **25 is a decision, not work.**
+
+- [x] **Task 20: Correct the public/read-only surface claim and lock it with tests**
+      (`docs/specs/002-public-read-only-surfaces.md`, 6 tests, suite 61 → 67).
+  - **A documented limitation was false.** `README.md` said public (token) views render no
+    diagrams "because they load none of Kanboard's JavaScript". Kanboard withholds *its
+    own* scripts there — `layout.php` guards only `vendor.min.js` and `app.min.js` behind
+    `not_editable` — while `template:layout:{css,js,head}` are rendered outside that guard.
+    The plugin has therefore always loaded and rendered on public task pages.
+  - Verified four ways rather than argued: the guard in `app/Template/layout.php`; a live
+    capture from `kanboard/kanboard:v1.2.53` carrying all three plugin scripts, the
+    stylesheet, ten meta tags and two `code.language-diagram` blocks with no `app.min.js`;
+    the same page run through jsdom with `KB` undefined, yielding two rendered figures,
+    zero edit links and zero errors; and a mutation check confirming the new test drops to
+    zero figures if the `language-diagram` selector ever changes.
+  - The public **board** genuinely shows nothing, but for a different reason worth
+    recording: its cards hold no Markdown, and a description reaches that page only as a
+    tooltip fetched by the Kanboard JS public pages do not load.
+  - The fixture is a real capture, regenerable with `bash test/capture-public-view.sh`
+    (Docker; seeds through JSON-RPC, strips `filemtime()` cache-busting and `colorCss()`).
+    It also pins the Kanboard-side precondition: the first test fails loudly if a
+    regenerated page no longer carries the plugin's assets.
+- [~] **Task 21: List the plugin in the directory (as `v0.1.1`)** — preparation complete, one
+      maintainer decision outstanding (7 tests, suite 67 → 74).
+  - **The premise changed while preparing it.** `v0.1.0` turned out to be *already
+    published* — tag, release and asset all exist as of 2026-08-18 19:34, built by the CI
+    release job. Both the dossier and this file said no release existed. What is actually
+    missing is the `plugins.json` PR: the live directory has 158 entries, case-insensitively
+    ordered, no `Drawio`, and the insertion point between `DiscordNotifier` and `duedate`
+    re-verified today.
+  - **The published asset is structurally correct but ships a stale README.** Root entry
+    `Drawio/`, 15 files, URL 200 — and its code is byte-identical to `main`. Only
+    `README.md` differs, because the asset predates Task 20 and still carries the
+    public-views claim that task disproved. Recorded in the dossier §14 with two ways out;
+    the recommendation is to cut `v0.1.1` while downloads are 0 and the entry is not yet
+    live, and never to re-upload onto a published tag — Kanboard's installer keys updates
+    off the version number, so same-version-different-contents is invisible to it.
+  - `test/release-metadata.test.js` turns the "re-diff the fifteen fields" step into a test:
+    the dossier's JSON entry must parse, carry exactly the fifteen live fields in
+    alphabetical order, and agree with `Plugin.php`, `CHANGELOG.md` and `package.json` on
+    version, author, homepage and compatible version, with the download URL derived from
+    the version rather than typed. A bump that forgets a file now fails the suite.
+  - **Decision taken (maintainer, 2026-08-18): cut `v0.1.1` and submit that.** Prepared
+    here and ready to commit — `Plugin::getPluginVersion()` → `0.1.1`, a documentation-only
+    `CHANGELOG.md` entry, `package.json`, and dossier §4/§7/§8/§10/§13 all moved together.
+    `dist/Drawio-0.1.1.zip` builds clean: root entry `Drawio/`, 15 files, and its bundled
+    README is byte-identical to the corrected one (0 occurrences of the disproved claim).
+    `v0.1.0` stays published — nothing about it is unsafe, one paragraph of its README is
+    wrong — and is explicitly *not* re-uploaded, because Kanboard's installer keys updates
+    off the version number and same-version-different-contents is invisible to it.
+  - Remaining, maintainer-only: commit, `git tag v0.1.1 && git push origin main --tags`
+    (CI builds and attaches the asset), confirm the §8 URL returns 200, fill the still-blank
+    verdict table in `docs/MANUAL_TESTING.md` §4, and open the PR — title and body drafted
+    in dossier §12–13, insertion point between `DiscordNotifier` and `duedate` re-verified
+    against the live file today.
+- [ ] **Task 22: Edit a diagram inside a blockquote.** Capture the opening line's exact
+      quote prefix as `fence.quotePrefix` and emit `prefix + payload + '\n'`; stop refusing
+      on `fence.quoted` in `isWritable()`, keeping the refusal for a prefix that cannot be
+      reproduced, and confirm before rewriting someone else's quotation. Risks in order:
+      **lazy continuation** (a quoted line may omit `>` and still belong to the quote —
+      mitigate with new fixtures regenerated through `test/parsedown-parity.php`), nested
+      `> > ` prefixes, and mixed per-line prefixes. Wiki.js's three-line invariant does not
+      apply inside a quote and must not be asserted there. ~10 new tests, 1 rewritten.
+- [ ] **Task 23: Full-size viewer overlay.** Not from the original backlog: Task 20
+      established that read-only readers are a real audience with no affordance at all, and
+      a diagram scaled to a comment column is often unreadable. Plugin-owned overlay, same
+      `<img>`, no `KB` dependency, no new CSP directive. Watch the Escape-key contention
+      with `KBDrawioEditor` and make sure refactoring `buildActions()` cannot leak an Edit
+      link onto a public page. ~6 tests.
+- [ ] **Task 24: Dark-theme legibility.** Kanboard ships light/dark/auto
+      (`--body-background-color:#222`); a transparent draw.io export with dark strokes
+      degrades badly. Paper background on `.drawio-diagram-image`, and Kanboard's CSS
+      variables instead of the hardcoded `#777`/`#b94a48` in `drawio.css`. No automated
+      coverage is honest here — it lands as rows in `docs/MANUAL_TESTING.md`.
+- [ ] **Task 25 (decision only): server-side rendering for notification emails.** Seven
+      notification templates render `$this->text->markdown(…, true)`;
+      `Core\Mail\Client::send()` has no filter hook; `Core\Template::setTemplateOverride()`
+      (`app/Core/Template.php:94`) would let a plugin substitute them. But the transports
+      support no attachments and `data:` images are blocked by Gmail and Outlook, so the
+      ceiling is a text placeholder replacing a ≤55KB base64 block — bought with seven
+      copied core templates to re-verify every release. **Recommendation: record the ADR,
+      defer the implementation.**
+- [ ] **Task 26: Translations.** No `Locale/` exists; nine `t()` strings are English-only.
+      `Translator::load($lang, $dir)` (`app/Core/Translator.php:168`) merges, so a plugin
+      catalogue composes with core. `ASSUMPTION` to resolve first: that `initialize()` runs
+      where `getCurrentLanguage()` is meaningful — core loads its own catalogue later, from
+      `BootstrapSubscriber` on `app.bootstrap`. Verify live in French. Add a key-parity step
+      to `scripts/agent-verify.sh`.
+- [ ] **Task 27: Housekeeping.** The stray whitespace-only edit in
+      `Asset/js/drawio-markdown.js:113` (`{ text: text, depth: depth }` against the file's
+      own brace style) is still uncommitted and untouched — it is the maintainer's working
+      change, not this task's. Keep the test count in this file tied to `npm test` output.
 
 ### Backlog (unscheduled)
 
-- [ ] Editing a diagram inside a blockquote (currently refused by design).
-- [ ] Rendering diagrams on public/token board views, which load none of Kanboard's JS.
-- [ ] An optional server-side renderer for notification emails — additive, would not
-      change the stored format.
+- [ ] Rendering a diagram inside the board tooltip is covered by the `MutationObserver`
+      and the fragment does carry `code.language-diagram` (verified against
+      `/board/tooltip/1/description`), but no test exercises that path.
+- [ ] Public **board** tooltips, which would mean reimplementing Kanboard's tooltip fetch
+      on a page that ships no JavaScript.
 
 ---
 
 ## 🛠️ Essential Commands & Agentic Scripts
 
 ```bash
-# Automated agent verification pipeline (JS syntax, PHP lint, 51 tests, packaging shape)
+# Automated agent verification pipeline (JS syntax, PHP lint, 74 tests, packaging shape)
 bash scripts/agent-verify.sh
 
 # Test suite only (node:test, jsdom is the only dev dependency)

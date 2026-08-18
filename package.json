@@ -1,10 +1,10 @@
 {
   "name": "kanboard-plugin-drawio",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Test harness for the Kanboard draw.io plugin. The plugin itself ships no dependencies and has no build step.",
   "scripts": {
-    "test": "node --test test/dom.test.js test/markdown.test.js test/parity.test.js test/payload.test.js test/wikijs-parity.test.js"
+    "test": "node --test test/dom.test.js test/markdown.test.js test/parity.test.js test/payload.test.js test/public-view.test.js test/release-metadata.test.js test/wikijs-parity.test.js"
   },
   "license": "MIT",
   "devDependencies": {

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Kanboard\Plugin\Drawio;
 
 use Kanboard\Core\Plugin\Base;

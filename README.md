@@ -152,8 +152,31 @@ upgrade:
 php test/parsedown-parity.php /path/to/kanboard
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for what was verified in the Kanboard
-source and why the design looks the way it does.
+Before opening a pull request, run the full pipeline:
+
+```bash
+bash scripts/agent-verify.sh
+```
+
+It lints both languages, runs the suite, and checks the rules no unit test can see —
+that every asset on disk is attached in `Plugin.php`, that no template carries an inline
+`<script>` (Kanboard's CSP refuses them), that no schema or route has appeared, and that
+nothing reaches the DOM through `innerHTML`.
+
+Releases are built by `bash scripts/package-plugin.sh`, which refuses to package a red
+suite and asserts the archive extracts to `Drawio/` — a GitHub source archive would not,
+and Kanboard's installer would load it under the wrong name.
+
+### Further reading
+
+| | |
+|---|---|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | What was verified in the Kanboard source, the architecture comparison, and every coupling the plugin has |
+| [AGENTS.md](AGENTS.md) | Non-negotiable rules for humans and AI agents working here |
+| [CLAUDE.md](CLAUDE.md) | Milestone roadmap, command cheat-sheet, and the running task log |
+| [docs/specs/](docs/specs/) | Feature specs — write one before writing feature code |
+| [docs/decisions/](docs/decisions/) | Architecture decision records |
+| [docs/kanboard-directory-submission.md](docs/kanboard-directory-submission.md) | Everything needed to list the plugin in the official directory |
 
 ## License
 

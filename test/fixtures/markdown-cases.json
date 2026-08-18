@@ -1,0 +1,23 @@
+[
+  "plain text only\n",
+  "```diagram\nQUFB\n```\n",
+  "before\n\n```diagram\nQUFB\n```\n\nafter\n",
+  "```diagram\nQUFB\n```\n\n```diagram\nQkJC\n```\n",
+  "```diagram\nQUFB\n```\n\n```diagram\nQUFB\n```\n",
+  "~~~\n```diagram\nQUFB\n```\n~~~\n",
+  "~~~diagram\nQUFB\n~~~\n",
+  "```diagram  \nQUFB\n```\n",
+  "    ```diagram\n    QUFB\n    ```\n",
+  "  ```diagram\nQUFB\n  ```\n",
+  "```diagram\nQUFB\n```\n\n```diagram\nQkJC",
+  "```js\nvar a = 1;\n```\n\n```diagram\nQUFB\n```\n",
+  "```diagram\nQUFB\n````\n",
+  "text\r\n\r\n```diagram\r\nQUFB\r\n```\r\n",
+  "> ```diagram\n> QUFB\n> ```\n",
+  "> quoted intro\n>\n> ```diagram\n> QUFB\n> ```\n\n```diagram\nQkJC\n```\n",
+  "* item\n\n  ```diagram\n  QUFB\n  ```\n",
+  "# Heading with #42 and @alice\n\n```diagram\nQUFB\n```\n\nTrailing #7\n",
+  "```\nQUFB\n```\n",
+  "```diagram\n```\n",
+  "```DIAGRAM\nQUFB\n```\n"
+]

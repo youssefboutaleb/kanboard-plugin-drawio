@@ -1,0 +1,13 @@
+{
+  "name": "kanboard-plugin-drawio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Test harness for the Kanboard draw.io plugin. The plugin itself ships no dependencies and has no build step.",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "jsdom": "^30.0.1"
+  }
+}

@@ -1,0 +1,89 @@
+/* Draw.io for Kanboard */
+
+/* The fence stays in the DOM as the source the editor reads back, but the
+ * base64 payload is never something a human wants to look at. Hiding it in CSS
+ * rather than in JavaScript also avoids a flash of raw base64 before the
+ * diagram is rendered. Not scoped to `.markdown`: a `language-diagram` block
+ * can only come from this feature, wherever Kanboard renders it. */
+pre > code.language-diagram {
+    display: none;
+}
+
+pre:has(> code.language-diagram) {
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+}
+
+/* Shown when the diagram was not turned into an image: JavaScript never ran,
+ * or the payload could not be decoded. Better an explicit placeholder than an
+ * empty gap where a diagram should be. */
+pre:has(> code.language-diagram)::before {
+    content: "\25C7  draw.io diagram";
+    display: block;
+    color: #777;
+    font-size: 0.9em;
+}
+
+pre.drawio-diagram-source::before {
+    content: none;
+}
+
+pre[data-drawio-error]::before {
+    content: attr(data-drawio-error);
+    color: #b94a48;
+}
+
+.drawio-diagram {
+    margin: 1em 0;
+    padding: 0;
+    max-width: 100%;
+}
+
+.drawio-diagram-image {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+.drawio-diagram-actions {
+    margin-top: 0.25em;
+    font-size: 0.9em;
+}
+
+.drawio-diagram-actions a {
+    text-decoration: none;
+}
+
+.drawio-diagram-actions a:hover {
+    text-decoration: underline;
+}
+
+/* Matches the plain icon links Kanboard builds in text-editor.js. */
+.drawio-insert-button {
+    text-decoration: none;
+}
+
+.drawio-editor-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Above Kanboard's modal (100), its dropdowns and suggest menus (1000),
+     * and its alerts (9999) — the editor takes the whole screen. */
+    z-index: 10000;
+    background: #ffffff;
+}
+
+.drawio-editor-frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+body.drawio-editor-open {
+    overflow: hidden;
+}

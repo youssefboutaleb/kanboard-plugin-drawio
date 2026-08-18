@@ -174,6 +174,7 @@ and Kanboard's installer would load it under the wrong name.
 | [ARCHITECTURE.md](ARCHITECTURE.md) | What was verified in the Kanboard source, the architecture comparison, and every coupling the plugin has |
 | [AGENTS.md](AGENTS.md) | Non-negotiable rules for humans and AI agents working here |
 | [CLAUDE.md](CLAUDE.md) | Milestone roadmap, command cheat-sheet, and the running task log |
+| [docs/MANUAL_TESTING.md](docs/MANUAL_TESTING.md) | The browser checklist for the draw.io round trip — the one thing the automated suite cannot cover |
 | [docs/specs/](docs/specs/) | Feature specs — write one before writing feature code |
 | [docs/decisions/](docs/decisions/) | Architecture decision records |
 | [docs/kanboard-directory-submission.md](docs/kanboard-directory-submission.md) | Everything needed to list the plugin in the official directory |

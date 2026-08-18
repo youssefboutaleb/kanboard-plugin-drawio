@@ -79,12 +79,32 @@ the design looks the way it does.
 - [x] **Task 15: `docs/specs/`** — spec template plus the retro-spec for the shipped
   Markdown block feature, so the spec-driven loop starts from a worked example.
 
-### Milestone 3: Live Verification & First Release (NOT STARTED — v0.1.0)
+### Milestone 3: Live Verification & First Release (IN PROGRESS — v0.1.0)
 
-- [ ] **Task 16: Manual browser pass against the draw.io round trip.** Everything either
-      side of the frame is covered by tests; the live `init`/`save`/`export` handshake is
-      stubbed and has never run in a real browser. This is the one known gap.
-      Checklist lives in `docs/MANUAL_TESTING.md` (to be written as part of this task).
+- [x] **Task 16a: Write the manual browser test checklist** — `docs/MANUAL_TESTING.md`:
+      environment setup, a nine-case matrix, a DevTools protocol-inspection guide, a
+      results log and teardown. Every setup command in it was executed against
+      `kanboard/kanboard:v1.2.53` while writing, and the observed output is quoted rather
+      than described.
+  - The task list named eight cases while asking for nine; **M-06 (multiple diagrams,
+    editing one leaves the other byte-identical)** was added, because deterministic block
+    identification is the riskiest logic in the plugin and the only listed gap a browser
+    adds anything to.
+  - Verified while writing: the Docker tag is `v1.2.53` — `1.2.53` without the `v` returns
+    404; the image ships `/var/www/app/config.php` and has **no** `data/config.php`, and
+    appending `define('DRAWIO_MAX_PAYLOAD_SIZE', 2000);` there does change the
+    `drawio-max-payload` meta tag (confirmed 2000 → reverted → 55000); the entrypoint
+    chowns the whole app tree, so the plugin mount needs `:ro`.
+  - Verified the permission claim directly rather than asserting it: as `project-viewer`
+    the sidebar renders **0** `js-modal-large` links and `.comment-actions` contains **0**
+    `js-modal-medium` anchors; as `admin` there is exactly one of each, the comment's
+    pointing at `/task/1/comment/1/edit`. The Remove entry is `js-modal-confirm`, so the
+    plugin's selector is unambiguous.
+- [ ] **Task 16b: Execute the checklist in a real browser.** Needs a human with Chromium
+      **and** Gecko — the two engines take different paths through
+      `document.execCommand('insertText')` and its `value` fallback. Record every verdict
+      and root cause in the results log and here. **This remains the one unverified part
+      of the plugin.**
 - [ ] **Task 17: Verify a real Wiki.js page round-trips** — paste an existing Wiki.js
       `diagram` block into a task, confirm it renders, edit it, confirm Wiki.js still
       opens the result.
@@ -212,6 +232,19 @@ Every task follows a 6-phase loop:
     `<img>` runs in the restricted "SVG as an image" mode: no scripts, no event handlers,
     no external subresource fetches. Wiki.js injects the same payload inline and needs a
     sanitiser downstream; we need nothing.
-13. **Verify the parser, don't remember it.** The blockquote bug was invisible to
+14. **A plugin's outgoing `postMessage` cannot be intercepted from the console.**
+    `iframe.contentWindow` for a cross-origin frame is a `WindowProxy` whose methods cannot
+    be patched — a browser security property, not a gap in the plugin. Infer outgoing
+    actions from their effects, or breakpoint `send()` in DevTools → Sources. A wrong
+    target origin is loud: the console names the mismatch explicitly.
+15. **The Kanboard Docker image regenerates `/var/www/app/config.php` from environment
+    variables on start**, so a `define()` appended for testing survives `docker exec` but
+    not `docker restart`. There is no `data/config.php` in the image even though
+    `app/common.php` loads it first if present.
+16. **Verify the parser, don't remember it.** The blockquote bug was invisible to
     reasoning and obvious the moment fixtures were generated from the real Parsedown.
     `test/parsedown-parity.php` exists so the next Kanboard upgrade re-checks it.
+17. **Seed fixtures through the JSON-RPC API, not the UI.** `createProject`, `createTask`,
+    `createComment`, `createUser` and `addProjectUser` (role `project-viewer`) with
+    `-u admin:admin` set up the whole manual-test environment in five calls, including a
+    task holding two identical diagrams — the fixture that catches wrong-block writes.

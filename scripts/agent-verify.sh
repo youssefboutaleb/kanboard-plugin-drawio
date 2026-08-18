@@ -15,7 +15,7 @@ echo "======================================================"
 
 FAILED=0
 
-echo "--> [1/5] Checking JavaScript syntax..."
+echo "--> [1/6] Checking JavaScript syntax..."
 if command -v node >/dev/null 2>&1; then
     for file in Asset/js/*.js; do
         node --check "${file}"
@@ -26,7 +26,7 @@ else
     exit 1
 fi
 
-echo "--> [2/5] Checking PHP syntax..."
+echo "--> [2/6] Checking PHP syntax..."
 if command -v php >/dev/null 2>&1; then
     find . -name '*.php' -not -path './node_modules/*' -exec php -l {} \; \
         | grep -v "No syntax errors detected" || true
@@ -40,7 +40,15 @@ else
     echo "⚠️  Neither PHP nor Docker found; skipping the PHP lint."
 fi
 
-echo "--> [3/5] Running the test suite..."
+echo "--> [3/6] Checking embed-origin parsing..."
+# The origin ends up in the CSP and is what every incoming postMessage is
+# checked against, so it gets its own guard rather than riding on the PHP lint.
+if ! bash test/embed-origin.sh; then
+    echo "✖ Embed-origin parsing is wrong" >&2
+    FAILED=1
+fi
+
+echo "--> [4/6] Running the test suite..."
 if [ ! -d node_modules ]; then
     echo "    installing dev dependencies..."
     npm install --no-audit --no-fund --silent
@@ -48,7 +56,7 @@ fi
 npm test --silent
 echo "✔ Test suite passed"
 
-echo "--> [4/5] Checking asset registration..."
+echo "--> [5/6] Checking asset registration..."
 # Every script and stylesheet on disk must be attached in Plugin.php, and every
 # path attached in Plugin.php must exist. A mismatch is invisible at runtime:
 # Kanboard's asset helper would fatal on filemtime(), or the file would simply
@@ -73,7 +81,7 @@ if [ ! -f "Template/layout/config.php" ]; then
 fi
 [ "${FAILED}" -eq 0 ] && echo "✔ Assets and templates registered consistently"
 
-echo "--> [5/5] Checking the integrity rules that cannot be unit-tested..."
+echo "--> [6/6] Checking the integrity rules that cannot be unit-tested..."
 # No inline <script> or <style>: Kanboard's CSP is default-src 'self' with no
 # script-src exception, so an inline block is silently refused by the browser.
 # `code_lines` drops comment lines and prose in backticks so that documenting a

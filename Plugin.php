@@ -71,9 +71,15 @@ class Plugin extends Base
         $current = isset($rules['frame-src']) ? $rules['frame-src'] : "'self'";
         $origin = self::getEmbedOrigin();
 
-        if (strpos($current, $origin) === false) {
-            $rules['frame-src'] = trim($current.' '.$origin);
+        // An empty origin means the editor is same-origin (a relative
+        // DRAWIO_EMBED_URL such as '/drawio/'), which 'self' already covers.
+        // Adding anything here would allow-list a third party the admin
+        // deliberately opted out of by self-hosting.
+        if ($origin !== '' && strpos($current, $origin) === false) {
+            $current = trim($current.' '.$origin);
         }
+
+        $rules['frame-src'] = $current;
 
         $this->setContentSecurityPolicy($rules);
     }
@@ -84,15 +90,21 @@ class Plugin extends Base
     }
 
     /**
-     * The scheme and host of the embed URL, which is what CSP accepts and what
-     * the browser compares postMessage origins against.
+     * The scheme, host and port of the embed URL — the form CSP accepts and the
+     * exact string the browser compares a postMessage origin against.
+     *
+     * Returns an empty string when the configured URL carries no scheme and host
+     * of its own. That is the same-origin case: an admin self-hosting draw.io
+     * behind the same server points DRAWIO_EMBED_URL at a path such as
+     * '/drawio/', the browser resolves it against the current origin, and CSP
+     * needs no entry beyond the 'self' that is already there.
      */
     public static function getEmbedOrigin()
     {
         $url = parse_url(self::getEmbedUrl());
 
-        if (empty($url['scheme']) || empty($url['host'])) {
-            return self::DEFAULT_EMBED_URL;
+        if ($url === false || empty($url['scheme']) || empty($url['host'])) {
+            return '';
         }
 
         $origin = $url['scheme'].'://'.$url['host'];

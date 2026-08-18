@@ -70,6 +70,16 @@ the plugin appends `embed=1&proto=json&…` itself. Its origin is what the plugi
 adds to the CSP and what it checks incoming `postMessage` events against, so
 pointing this at a host you do not trust hands that host your editing session.
 
+The origin is derived from the URL, so scheme and port are honoured, and a
+relative path adds nothing to the policy — `'self'` already covers it:
+
+| `DRAWIO_EMBED_URL` | Resulting `frame-src` |
+|---|---|
+| *(unset)* | `'self' https://embed.diagrams.net` |
+| `https://drawio.example.com:8443/webapp/` | `'self' https://drawio.example.com:8443` |
+| `http://drawio.lan/` | `'self' http://drawio.lan` |
+| `/drawio/` (same server) | `'self'` — no third-party origin is allow-listed |
+
 #### A note on MySQL
 
 MySQL and MariaDB store task descriptions and comments in a `TEXT` column, which
@@ -127,6 +137,10 @@ only the on-disk format is shared.
 - A diagram inside a blockquote (what replying to a comment produces) renders,
   but cannot be edited in place — rewriting a quoted block's payload would have
   to re-quote it, and a half-rewritten quote is worse than a refusal.
+- A `~~~diagram` fence works here and renders in Wiki.js, but Wiki.js only offers
+  to edit blocks opened with three backticks. The plugin rewrites the payload and
+  nothing else, so a tilde fence stays a tilde fence — converting it would change
+  Markdown the user did not ask to change.
 - Notification emails contain the Markdown as Kanboard renders it server-side,
   so a diagram appears there as a code block rather than a picture.
 - Public (token) board views load none of Kanboard's JavaScript, so diagrams are

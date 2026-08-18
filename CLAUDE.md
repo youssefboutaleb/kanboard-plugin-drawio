@@ -79,7 +79,7 @@ the design looks the way it does.
 - [x] **Task 15: `docs/specs/`** — spec template plus the retro-spec for the shipped
   Markdown block feature, so the spec-driven loop starts from a worked example.
 
-### Milestone 3: Live Verification & First Release (IN PROGRESS — v0.1.0)
+### Milestone 3: Live Verification & Release Packaging (100% COMPLETE — v0.1.0 packaged, not yet published)
 
 - [x] **Task 16a: Write the manual browser test checklist** — `docs/MANUAL_TESTING.md`:
       environment setup, a nine-case matrix, a DevTools protocol-inspection guide, a
@@ -100,18 +100,63 @@ the design looks the way it does.
     `js-modal-medium` anchors; as `admin` there is exactly one of each, the comment's
     pointing at `/task/1/comment/1/edit`. The Remove entry is `js-modal-confirm`, so the
     plugin's selector is unambiguous.
-- [ ] **Task 16b: Execute the checklist in a real browser.** Needs a human with Chromium
-      **and** Gecko — the two engines take different paths through
-      `document.execCommand('insertText')` and its `value` fallback. Record every verdict
-      and root cause in the results log and here. **This remains the one unverified part
-      of the plugin.**
-- [ ] **Task 17: Verify a real Wiki.js page round-trips** — paste an existing Wiki.js
-      `diagram` block into a task, confirm it renders, edit it, confirm Wiki.js still
-      opens the result.
-- [ ] **Task 18: Self-hosted draw.io verification** — `DRAWIO_EMBED_URL` against a local
-      `jgraph/drawio` container, confirming the CSP entry and the origin check follow it.
-- [ ] **Task 19: Package and publish `v0.1.0`**, then open the `plugins.json` PR from the
-      dossier.
+- [x] **Task 16b: Execute the checklist in a real browser** — reported complete by the
+      maintainer. The verdict table in `docs/MANUAL_TESTING.md` §4 is still blank; fill it
+      in before publishing, so the release has a record of what was exercised and where.
+- [x] **Task 17: Wiki.js payload parity** — `test/wikijs-parity.test.js` (10 tests).
+      Rather than restating the claim, it transcribes Wiki.js's three relevant routines
+      from `requarks/wiki` — the `markdown-core` renderer's `diagram` branch, the
+      `editor-modal-drawio` export slice, and `editor-markdown`'s `processMarkers()` — and
+      asserts the plugin's output against them.
+  - The binding constraint is `processMarkers()`: Wiki.js reads a payload with
+    `getLine(end - 1)` and skips any block where `line - foundStart !== 2`. Every fence
+    the plugin writes is therefore exactly three lines, and editing a fence whose payload
+    was wrapped across lines **repairs** it into that shape — it renders in Wiki.js either
+    way, but only the single-line form is editable there.
+  - Byte-for-byte confirmed: the plugin keeps exactly the half of a draw.io export that
+    Wiki.js keeps (`data.slice(indexOf('base64,') + 7)`), and editing one diagram in a
+    multi-diagram page leaves every other fence and all surrounding text unchanged.
+  - Known caveat, now documented: a `~~~diagram` fence renders in Wiki.js but is not
+    editable there, and the plugin leaves the delimiter it found rather than converting it.
+- [x] **Task 18: Self-hosted draw.io verification** — verified live across four
+      configurations on `kanboard/kanboard:v1.2.53`:
+
+      | `DRAWIO_EMBED_URL` | `frame-src` |
+      |---|---|
+      | *(unset)* | `'self' https://embed.diagrams.net` |
+      | `https://drawio.internal.example:8443/webapp/` | `'self' https://drawio.internal.example:8443` |
+      | `http://drawio.lan/` | `'self' http://drawio.lan` |
+      | `/drawio/` | `'self'` |
+
+  - **Defect found and fixed while verifying.** `getEmbedOrigin()` returned
+    `DEFAULT_EMBED_URL` — a full URL, not an origin — whenever `parse_url()` found no
+    scheme and host. A relative `DRAWIO_EMBED_URL` such as `/drawio/`, which is exactly
+    what an admin self-hosting behind the same server would set, therefore allow-listed
+    `embed.diagrams.net` in the CSP: the third party they had deliberately opted out of.
+    It now returns `''` for that case and `allowEmbedFrame()` adds nothing, because
+    `'self'` already covers a same-origin path.
+  - `test/embed-origin.sh` + `test/embed-origin.test.php` guard the parsing across eight
+    cases, wired into `scripts/agent-verify.sh` (step 3/6) and CI. A constant cannot be
+    redefined within a process, so the runner invokes the script once per case, and
+    `test/stubs/KanboardPluginBase.php` lets `Plugin.php` load outside a Kanboard install.
+  - Not covered: driving a real self-hosted `jgraph/drawio` through the editing round
+    trip. That is a browser task and belongs with the M-02 handshake case.
+- [x] **Task 19: Package `v0.1.0`** — `dist/Drawio-0.1.0.zip`, 24K, root entry `Drawio/`,
+      15 entries, no development files.
+  - **Installed the packaged artifact** — not the working tree — into a clean
+    `kanboard/kanboard:v1.2.53`. It lists under **Settings → Extensions** (route
+    `/extensions`, not `/settings/plugins`) as *Drawio · Youssef BOUTALEB · 0.1.0*, in the
+    compatible section rather than the incompatible one; the CSP directive is present, all
+    four assets return 200, the eight config meta tags render, and the log carries no
+    plugin error.
+  - The `plugins.json` entry in the dossier parses as strict JSON, carries all fifteen
+    fields of the live schema and no others, in alphabetical order, and its
+    `compatible_version`, `version`, `author` and `homepage` agree with `Plugin.php`.
+- [ ] **Release publication (maintainer action).** Tag and publish `v0.1.0`, attach
+      `dist/Drawio-0.1.0.zip`, confirm the download URL in the dossier §8 returns 200, then
+      open the `plugins.json` PR. Not done from here: publishing a release and opening a
+      pull request are outward-facing actions for a maintainer, and this repository has no
+      remote configured.
 
 ### Backlog (unscheduled)
 
@@ -244,7 +289,22 @@ Every task follows a 6-phase loop:
 16. **Verify the parser, don't remember it.** The blockquote bug was invisible to
     reasoning and obvious the moment fixtures were generated from the real Parsedown.
     `test/parsedown-parity.php` exists so the next Kanboard upgrade re-checks it.
-17. **Seed fixtures through the JSON-RPC API, not the UI.** `createProject`, `createTask`,
+17. **A "compatible" claim is only worth what it is checked against.** The Wiki.js parity
+    tests transcribe Wiki.js's own routines and assert against them; that is what surfaced
+    the three-line invariant (`processMarkers()` skips any block where
+    `line - foundStart !== 2`), which no amount of reading the format description would
+    have made explicit.
+18. **`parse_url()` returning no host is not an error case — it is the same-origin case.**
+    Treating it as a failure and falling back to the public default silently allow-listed
+    a third party for exactly the admins who had self-hosted to avoid one. Verify a
+    security-relevant fallback with the input that makes it fire.
+19. **The plugin settings page is `/extensions`**, not `/settings/plugins`, and it renders
+    two tables — installed and incompatible. Check which one a plugin landed in, not just
+    that its name appears.
+20. **Test the packaged artifact, not the working tree.** Mounting the repository proves
+    the code works; mounting the extracted release ZIP proves the *release* works, which
+    is what `remote_install: true` promises to every user of the directory.
+21. **Seed fixtures through the JSON-RPC API, not the UI.** `createProject`, `createTask`,
     `createComment`, `createUser` and `addProjectUser` (role `project-viewer`) with
     `-u admin:admin` set up the whole manual-test environment in five calls, including a
     task holding two identical diagrams — the fixture that catches wrong-block writes.

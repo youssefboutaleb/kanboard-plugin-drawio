@@ -23,3 +23,4 @@ jobs:
         with:
           php-version: '8.1'
       - run: find . -name '*.php' -not -path './node_modules/*' -print0 | xargs -0 -n1 php -l
+      - run: bash test/embed-origin.sh

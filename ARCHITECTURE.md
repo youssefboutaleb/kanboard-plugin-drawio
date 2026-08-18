@@ -91,9 +91,16 @@ Read from `requarks/wiki`:
   and inserts new ones as ` ```diagram\n<payload>\n``` `.
 
 The format is therefore a plain base64 of the `xmlsvg` export, stable, lossless
-in both directions, and reusable as-is. The one thing not worth copying is Wiki.js's
-*rendering*: inline SVG makes scripts and event handlers live and depends on a
-downstream sanitiser.
+in both directions, and reusable as-is. `test/wikijs-parity.test.js` transcribes
+those three routines and asserts the plugin's output against them, so the
+compatibility claim is checked rather than stated. The binding constraint comes
+from `processMarkers()`: Wiki.js reads a payload with `getLine(end - 1)` and
+skips any block where `line - foundStart !== 2`, so **every fence this plugin
+writes is exactly three lines with the payload on one line**. Editing a fence
+whose payload was wrapped across lines repairs it into that shape.
+
+The one thing not worth copying is Wiki.js's *rendering*: inline SVG makes
+scripts and event handlers live and depends on a downstream sanitiser.
 
 ## Architecture comparison
 

@@ -135,6 +135,10 @@ the rules below exist to keep that true.
    - Work strictly within the single task assigned in the current plan phase.
    - Do not make opportunistic edits to unrelated components.
 
+5. **No AI Git Commits or Pushes**:
+   - AI agents (Claude Code, Antigravity, etc.) are **NEVER** allowed to run `git commit`, `git tag`, or `git push`.
+   - All commits, tags, and pushes must be performed manually by the maintainer in the terminal CLI to guarantee 100% human author identity (`Youssef BOUTALEB <youssefboutaleb.info@gmail.com>`).
+
 4. **Release Discipline**:
    - `Plugin::getPluginVersion()` is the single source of truth for the version.
    - `CHANGELOG.md` and `docs/kanboard-directory-submission.md` must agree with it.

@@ -480,6 +480,30 @@ Then, on the **dark** theme:
 the page. **On failure** — a diagram that disappears on dark means the surface rule is not
 reaching the image; check that `.drawio-diagram-image` still carries the plugin's class.
 
+### M-12 — Full-size viewer (added in Milestone 4, Task 23)
+
+jsdom has no layout engine, so the suite can prove the overlay exists, closes and toggles a
+class — but not that anything is actually *bigger*. That is this case.
+
+1. On task 1, click **View full size** under a diagram. It should fill the screen on a dark
+   backdrop, noticeably larger than the inline render.
+2. Press **Escape**. The viewer closes — and the task page beneath it stays open. (Do this
+   with the diagram inside a Kanboard modal too: the modal must survive.)
+3. Reopen, then click the **picture**: it switches to the diagram's own size and the surface
+   scrolls. Click again to fit. Nothing should close on these clicks.
+4. Reopen, then click the **backdrop** beside the image. It closes.
+5. Keyboard: Tab to the View link, press Enter, confirm focus lands on the close button,
+   press Tab a few times (focus must not escape behind the overlay), press Enter to close,
+   and confirm focus returns to the View link.
+6. Open the draw.io editor on a diagram; while it is open, no viewer should be reachable.
+7. As a `project-viewer` user, and on the public task URL, confirm **View full size** is
+   present and **Edit diagram** is not.
+
+**Pass** — the viewer is larger than the inline render in every case, closes three ways,
+and never leaves the keyboard stranded. **On failure** — a viewer that closes when the
+picture is clicked means the backdrop test is matching the image; a page that navigates
+means the action's `preventDefault` is not firing.
+
 ---
 
 ## 3. DevTools protocol inspection guide
@@ -574,6 +598,7 @@ complete when every row has a verdict and a browser recorded.
 | M-09 Wiki.js | | | |
 | M-10 Quoted diagram | | | |
 | M-11 Themes | | | |
+| M-12 Full-size viewer | | | |
 
 Run the matrix on at least one Chromium-based and one Gecko-based browser: the plugin uses
 `document.execCommand('insertText')` for undo-preserving writes with a `value` assignment

@@ -8,6 +8,11 @@
   confirmation first. A fence whose payload line is not itself quoted, or one
   broken by a blank line, is still refused: rewriting either would change the
   document's structure rather than just its payload.
+* Every diagram gains a **View full size** action, available to readers who
+  cannot edit it — including anonymous visitors on a public task link. It shows
+  the same image as large as the screen allows, with no frame and no network
+  request; clicking the picture toggles between fitting the viewport and the
+  diagram's own size, and Escape, the close button or the backdrop closes it.
 * Diagrams stay legible on Kanboard's dark theme. A diagram whose own background
   is transparent used to be dark strokes on `#222`; every diagram now renders on
   a constant light surface, in every theme, so it looks the same wherever it is

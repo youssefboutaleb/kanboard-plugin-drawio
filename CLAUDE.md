@@ -51,7 +51,7 @@ the design looks the way it does.
 - [x] **Task 6: Implement deterministic block identification** — ordinal, confirmed
   against the loaded payload, with an unambiguous-payload fallback and a refusal
   otherwise. Nothing is added to the Markdown.
-- [x] **Task 7: Test suite (51 tests at the time; 98 today — the count comes from `npm test`)**
+- [x] **Task 7: Test suite (51 tests at the time; 108 today — the count comes from `npm test`)**
   - **Root cause found by the parity fixtures**: blockquoted fences are diagram blocks to
     Parsedown (`TextHelper::reply()` prefixes every line with `> `) but were invisible to
     the JavaScript tokenizer, which silently shifted every ordinal after them. Fixed by
@@ -162,7 +162,7 @@ the design looks the way it does.
 ### Milestone 4: Read-path correctness, honest documentation, directory listing (IN PROGRESS)
 
 Sequencing: **20 → 22 → 24 done**; `v0.1.1` published with the documentation correction.
-Remaining: **23** (the last feature) and **27** (housekeeping), then cut **v0.2.0**.
+Remaining: **27** (housekeeping), then cut **v0.2.0**.
 
 **21 is independent of that.** The dossier is ready and points at `v0.1.1`, so the directory
 pull request can be opened now; waiting for `v0.2.0` instead only means re-pointing §7/§8/§10
@@ -259,12 +259,31 @@ Maintainer's choice — it is not a technical dependency either way.
     Parsedown (31 cases total); the tokenizer agrees on all of them.
   - Not in scope, now documented in the README: inserting a *new* diagram with the cursor
     inside a blockquote still writes an unquoted fence, which ends the quote.
-- [ ] **Task 23: Full-size viewer overlay.** Not from the original backlog: Task 20
-      established that read-only readers are a real audience with no affordance at all, and
-      a diagram scaled to a comment column is often unreadable. Plugin-owned overlay, same
-      `<img>`, no `KB` dependency, no new CSP directive. Watch the Escape-key contention
-      with `KBDrawioEditor` and make sure refactoring `buildActions()` cannot leak an Edit
-      link onto a public page. ~6 tests.
+- [x] **Task 23: Full-size viewer overlay**
+      (`docs/specs/005-full-size-viewer.md`, 10 tests, suite 98 → 108).
+  - **Looking and writing are now separate.** `buildActions()` used to be called only when
+    `resolveSurface()` found somewhere to write, so a reader with no edit rights got no
+    actions block at all. It is now always built, with View always present and Edit added
+    only where Kanboard offers a way to change the surrounding Markdown. Anonymous readers
+    on a public task link get the affordance; the permission model is untouched.
+  - **A test asserting the wrong thing had to be retired deliberately.** Two tests used
+    "no `.drawio-diagram-actions`" as a proxy for "cannot edit". That proxy is now false by
+    design, so they assert the absence of `a.drawio-diagram-edit` — which is what the
+    borrowed-link permission model actually guarantees. Recorded in the spec rather than
+    quietly changed.
+  - **A bug caught while writing it**: the view action first captured the payload at render
+    time, so after an edit it would have reopened the *previous* diagram. It now reads the
+    payload from the DOM at click time, where `refreshRendered()` keeps it current.
+    Mutation-checked — restoring the capture fails the test.
+  - The viewer refuses to open while draw.io is open, which keeps the two capture-phase
+    Escape handlers from fighting; Escape is stopped so the Kanboard modal underneath does
+    not close with it; focus moves to the close button and returns to the trigger. Clicking
+    the picture toggles fit ⇄ actual size, for a diagram too wide for fitting to help.
+  - `z-index: 9998` — above Kanboard's modals (100) and dropdowns (1000), below its alerts
+    (9999) and below the draw.io editor (10000), which owns the screen while open.
+  - No new module (the plugin keeps three, one responsibility each), no route, no storage,
+    no CSP change, no `KB` dependency. `docs/MANUAL_TESTING.md` M-12 covers what jsdom
+    cannot: that the thing is actually *bigger*.
 - [x] **Task 24: Dark-theme legibility**
       (`docs/specs/004-dark-theme-legibility.md`, 10 tests, suite 88 → 98).
   - **The theme cannot be detected, so the fix must not depend on detecting it.** Kanboard
@@ -318,7 +337,7 @@ Maintainer's choice — it is not a technical dependency either way.
 ## 🛠️ Essential Commands & Agentic Scripts
 
 ```bash
-# Automated agent verification pipeline (JS syntax, PHP lint, 98 tests, packaging shape)
+# Automated agent verification pipeline (JS syntax, PHP lint, 108 tests, packaging shape)
 bash scripts/agent-verify.sh
 
 # Test suite only (node:test, jsdom is the only dev dependency)
@@ -477,3 +496,11 @@ Every task follows a 6-phase loop:
     is what a manual theme pass is for.
 26. **Kanboard has no global `box-sizing` reset.** Adding padding to anything with
     `max-width: 100%` overflows its container unless the plugin sets `border-box` itself.
+27. **An action's presence is not a permission.** Gating the whole actions block on
+    "can edit" quietly denied readers a way to *read* — and two tests had encoded that
+    conflation as a proxy assertion. Assert the specific affordance (`a.drawio-diagram-edit`),
+    never the container it happens to live in.
+28. **Capturing state at render time is a bug waiting for an edit.** The view action first
+    closed over the payload it was built with, which would have reopened the pre-edit
+    diagram. Anything the DOM keeps current — here `refreshRendered()` — should be read at
+    the moment of use, not at the moment of wiring.

@@ -27,6 +27,7 @@ only place a diagram ever lives.
 | | |
 |---|---|
 | **View** | Every Markdown surface — task descriptions, comments, project and swimlane descriptions, the editor preview pane — renders `diagram` blocks as images. |
+| **Enlarge** | Every diagram carries a *View full size* action — including for readers who cannot edit it — showing it as large as the screen allows. |
 | **Edit** | The diagram carries an *Edit diagram* action wherever Kanboard itself offers an edit action for the surrounding text. Saving replaces that one block in the textarea; the change is then saved by Kanboard's ordinary form. |
 | **Insert** | The Markdown editor toolbar gets an *Insert diagram* button that opens draw.io and writes a new fence at the cursor. |
 | **Interoperate** | The payload is byte-for-byte the format [Wiki.js](https://js.wiki) uses, so diagrams move between the two in either direction. |
@@ -154,6 +155,17 @@ only the on-disk format is shared.
   all, and a task's description reaches that page only as a tooltip fetched by
   Kanboard's own JavaScript, which public pages do not load. A public **task**
   view does render its diagrams — see below.
+
+## Viewing a diagram full size
+
+Every diagram carries a **View full size** action, whether or not the reader can edit it.
+It opens the same image as large as the screen allows, with no frame and no network
+request; clicking the picture switches between fitting the viewport and the diagram's own
+size for anything too wide to fit. Escape, the close button or a click on the backdrop
+closes it.
+
+This is deliberately available to readers who cannot edit — including anonymous visitors on
+a public task link — because reading a diagram is not editing it.
 
 ## Public and read-only views
 

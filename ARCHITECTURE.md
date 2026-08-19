@@ -150,8 +150,10 @@ Markdown source (task, comment, project, …)   ← the only storage
         ▼
 <figure class="drawio-diagram">
     <img src="data:image/svg+xml;base64,payload">            ← inert render
-    <a>Edit diagram</a>                                       ← only where Kanboard
-</figure>                                                        offers an edit action
+    <a>View full size</a>                                     ← always: reading is
+    <a>Edit diagram</a>                                          not editing
+</figure>                                                     ← Edit only where Kanboard
+                                                                 offers an edit action
         │
         │ click
         ▼

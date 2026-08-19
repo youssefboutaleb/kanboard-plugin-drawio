@@ -116,9 +116,29 @@ test('the fence survives rendering, so the payload is still the source of truth'
 test('a public reader is offered nothing to edit', () => {
     const {document} = setup();
 
+    // Note: the presence of an actions block is deliberately *not* asserted here. Since
+    // Task 23 every diagram carries one, because looking is not editing; the property the
+    // permission model guarantees is the absence of the edit link itself.
     assert.strictEqual(document.querySelectorAll('a.drawio-diagram-edit').length, 0);
     assert.strictEqual(document.querySelectorAll('a.drawio-insert-button').length, 0);
-    assert.strictEqual(document.querySelectorAll('.drawio-diagram-actions').length, 0);
+});
+
+test('a public reader can open a diagram full size', () => {
+    const {window, document} = setup();
+
+    assert.strictEqual(document.querySelectorAll('a.drawio-diagram-view').length, 2,
+        'reading is offered on every diagram, including to an anonymous visitor');
+
+    document.querySelector('a.drawio-diagram-view').click();
+
+    const overlay = document.querySelector('.drawio-viewer-overlay');
+
+    assert.ok(overlay, 'the viewer needs no KB runtime');
+    assert.strictEqual(typeof window.KB, 'undefined');
+    assert.strictEqual(overlay.querySelector('img').getAttribute('src'),
+        'data:image/svg+xml;base64,' + PAYLOADS[0]);
+    assert.strictEqual(overlay.querySelector('a.drawio-diagram-edit'), null,
+        'the viewer offers no way to change anything');
 });
 
 test('still nothing to edit when a KB runtime exists but Kanboard rendered no edit action', () => {

@@ -395,3 +395,138 @@ test('an unquoted diagram is edited without a confirmation', async () => {
 
     assert.strictEqual(textarea.value, '```diagram\n' + B + '\n```\n');
 });
+
+/* ------------------------------------------------------------------ viewer */
+
+/**
+ * Reading a diagram, as opposed to editing one. The inline render is bounded by its column
+ * and by Kanboard's own `.markdown img { max-width: 80% }`; the viewer is the way to see it
+ * properly, and the only affordance a reader without edit rights has.
+ * See docs/specs/005-full-size-viewer.md.
+ */
+const viewerOf = (document) => document.querySelector('.drawio-viewer-overlay');
+
+test('every diagram offers a full-size view, editable or not', () => {
+    const {document} = setup(`<article class="markdown">${block(A)}</article>`);
+
+    assert.strictEqual(document.querySelectorAll('a.drawio-diagram-view').length, 1);
+    assert.strictEqual(document.querySelectorAll('a.drawio-diagram-edit').length, 0,
+        'this diagram has no editable surface, and looking does not require one');
+});
+
+test('the viewer shows the diagram and injects no markup', () => {
+    const hostile = b64('<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><script>x()</script></svg>');
+    const {document} = setup(`<article class="markdown">${block(hostile)}</article>`);
+
+    document.querySelector('a.drawio-diagram-view').click();
+    const overlay = viewerOf(document);
+
+    assert.strictEqual(overlay.querySelector('img').getAttribute('src'),
+        'data:image/svg+xml;base64,' + hostile);
+    assert.strictEqual(overlay.querySelector('svg'), null);
+    assert.strictEqual(overlay.querySelector('script'), null);
+    assert.strictEqual(overlay.getAttribute('role'), 'dialog');
+    assert.strictEqual(overlay.getAttribute('aria-modal'), 'true');
+});
+
+test('Escape closes the viewer and does not reach Kanboard', () => {
+    const {window, document} = setup(`<article class="markdown">${block(A)}</article>`);
+    const escapesSeenByKanboard = [];
+
+    window.document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            escapesSeenByKanboard.push(event.key);
+        }
+    }, false);
+
+    document.querySelector('a.drawio-diagram-view').click();
+    assert.ok(viewerOf(document));
+
+    window.dispatchEvent(new window.KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
+
+    assert.strictEqual(viewerOf(document), null);
+    assert.deepStrictEqual(escapesSeenByKanboard, [],
+        'the modal underneath must not close along with the viewer');
+    assert.strictEqual(document.body.classList.contains('drawio-viewer-open'), false);
+});
+
+test('the backdrop closes the viewer, the image does not', () => {
+    const {document} = setup(`<article class="markdown">${block(A)}</article>`);
+
+    document.querySelector('a.drawio-diagram-view').click();
+    viewerOf(document).querySelector('img').click();
+
+    assert.ok(viewerOf(document), 'clicking the picture must not throw away what you are reading');
+
+    viewerOf(document).click();
+
+    assert.strictEqual(viewerOf(document), null);
+});
+
+test('clicking the image toggles actual size', () => {
+    const {document} = setup(`<article class="markdown">${block(A)}</article>`);
+
+    document.querySelector('a.drawio-diagram-view').click();
+    const image = viewerOf(document).querySelector('img');
+
+    assert.strictEqual(image.classList.contains('drawio-viewer-image-actual'), false,
+        'fitted to the viewport by default');
+
+    image.click();
+    assert.strictEqual(image.classList.contains('drawio-viewer-image-actual'), true);
+
+    image.click();
+    assert.strictEqual(image.classList.contains('drawio-viewer-image-actual'), false);
+});
+
+test('the viewer refuses to open while draw.io is open', () => {
+    const context = setup(`<article class="markdown">${block(A)}</article>`);
+
+    context.window.KBDrawioEditor.isOpen = () => true;
+    context.document.querySelector('a.drawio-diagram-view').click();
+
+    assert.strictEqual(viewerOf(context.document), null,
+        'one overlay at a time, or the two Escape handlers fight');
+});
+
+test('focus moves into the viewer and returns to the trigger', () => {
+    const {document} = setup(`<article class="markdown">${block(A)}</article>`);
+    const trigger = document.querySelector('a.drawio-diagram-view');
+
+    trigger.focus();
+    trigger.click();
+
+    const close = viewerOf(document).querySelector('.drawio-viewer-close');
+
+    assert.strictEqual(document.activeElement, close, 'a keyboard user lands on the close button');
+
+    close.click();
+
+    assert.strictEqual(viewerOf(document), null);
+    assert.strictEqual(document.activeElement, trigger, 'and is put back where they were');
+});
+
+test('a repeated render does not duplicate the view action', async () => {
+    const context = setup(`<article class="markdown">${block(A)}</article>`);
+
+    context.document.querySelector('article').appendChild(context.document.createElement('span'));
+    await context.frame();
+
+    assert.strictEqual(context.document.querySelectorAll('a.drawio-diagram-view').length, 1);
+});
+
+test('the viewer shows the edited diagram, not the one that was rendered', async () => {
+    const context = setup(editor('```diagram\n' + A + '\n```\n'));
+
+    context.document.querySelector('.text-editor-preview-area').innerHTML = block(A);
+    await context.frame();
+
+    context.document.querySelector('a.drawio-diagram-edit').click();
+    context.opened[0].onSave(B);
+
+    context.document.querySelector('a.drawio-diagram-view').click();
+
+    assert.strictEqual(viewerOf(context.document).querySelector('img').getAttribute('src'),
+        'data:image/svg+xml;base64,' + B,
+        'the payload is read at click time, so an edit is reflected');
+});

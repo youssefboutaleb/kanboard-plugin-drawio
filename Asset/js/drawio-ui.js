@@ -15,6 +15,7 @@
     var MARKDOWN_CONTAINER = '.markdown, .text-editor-preview-area';
     var scheduled = false;
     var pendingModalEdit = null;
+    var viewer = null;
 
     /* ---------------------------------------------------------------- config */
 
@@ -64,32 +65,52 @@
         figure.className = 'drawio-diagram';
         figure.appendChild(image);
 
-        var surface = resolveSurface(pre);
-
-        if (surface !== null) {
-            figure.appendChild(buildActions(pre, surface));
-        }
+        figure.appendChild(buildActions(pre, resolveSurface(pre)));
 
         pre.classList.add('drawio-diagram-source');
         pre.parentNode.insertBefore(figure, pre);
     }
 
+    /**
+     * The actions under a diagram.
+     *
+     * Looking and writing are separate permissions: every diagram can be opened full size,
+     * because that is reading, while Edit appears only where Kanboard itself offers a way
+     * to change the surrounding Markdown. The presence of this block therefore says nothing
+     * about whether a diagram is editable — `a.drawio-diagram-edit` does.
+     */
     function buildActions(pre, surface) {
-        var link = document.createElement('a');
-        link.setAttribute('href', '#');
-        link.className = 'drawio-diagram-edit';
-        link.appendChild(icon('pencil-square-o'));
-        link.appendChild(document.createTextNode(' ' + label('edit', 'Edit diagram')));
-        link.addEventListener('click', function (event) {
-            event.preventDefault();
-            startEdit(pre, surface);
-        }, false);
-
         var actions = document.createElement('div');
         actions.className = 'drawio-diagram-actions';
-        actions.appendChild(link);
+
+        /* Read the payload at click time, not now: an edit rewrites the block in place
+         * (refreshRendered), and a captured payload would reopen the diagram as it was
+         * before that edit. */
+        actions.appendChild(action('drawio-diagram-view', 'search-plus', label('view', 'View full size'), function () {
+            openViewer(payloadOf(pre));
+        }));
+
+        if (surface !== null) {
+            actions.appendChild(action('drawio-diagram-edit', 'pencil-square-o', label('edit', 'Edit diagram'), function () {
+                startEdit(pre, surface);
+            }));
+        }
 
         return actions;
+    }
+
+    function action(className, iconName, text, onClick) {
+        var link = document.createElement('a');
+        link.setAttribute('href', '#');
+        link.className = className;
+        link.appendChild(icon(iconName));
+        link.appendChild(document.createTextNode(' ' + text));
+        link.addEventListener('click', function (event) {
+            event.preventDefault();
+            onClick();
+        }, false);
+
+        return link;
     }
 
     function icon(name) {
@@ -249,6 +270,120 @@
 
         if (figure !== null && figure.classList.contains('drawio-diagram')) {
             figure.querySelector('img').setAttribute('src', KBDrawioMarkdown.toDataUri(payload));
+        }
+    }
+
+    /* ----------------------------------------------------------------- viewing */
+
+    /**
+     * Show a diagram as large as the screen allows.
+     *
+     * The inline render is capped by whatever column it sits in — and by Kanboard's own
+     * `.markdown img { max-width: 80% }` — which frequently leaves a diagram too small to
+     * read. This is the only affordance a reader without edit rights has, so it does
+     * nothing but display: the same `data:` URI, in a fresh `<img>`, with no frame, no
+     * request and no way to change anything.
+     */
+    function openViewer(payload) {
+        /* The editor owns the screen while it is open, and pins Escape in the capture
+         * phase. One overlay at a time keeps the two from fighting over the key. */
+        if (viewer !== null || (typeof KBDrawioEditor !== 'undefined' && KBDrawioEditor.isOpen())) {
+            return;
+        }
+
+        if (!KBDrawioMarkdown.isValidPayload(payload)) {
+            return;
+        }
+
+        var image = document.createElement('img');
+        image.className = 'drawio-viewer-image';
+        image.setAttribute('alt', label('alt', 'draw.io diagram'));
+        image.setAttribute('src', KBDrawioMarkdown.toDataUri(payload));
+        image.addEventListener('click', toggleActualSize, false);
+
+        var surface = document.createElement('div');
+        surface.className = 'drawio-viewer-surface';
+        surface.appendChild(image);
+
+        var close = document.createElement('button');
+        close.setAttribute('type', 'button');
+        close.className = 'drawio-viewer-close';
+        close.setAttribute('aria-label', label('close', 'Close'));
+        close.appendChild(icon('times'));
+        close.addEventListener('click', closeViewer, false);
+
+        var overlay = document.createElement('div');
+        overlay.className = 'drawio-viewer-overlay';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-label', label('view', 'View full size'));
+        overlay.appendChild(close);
+        overlay.appendChild(surface);
+
+        /* Only the backdrop dismisses. Clicking the picture is how you zoom it, and a
+         * misplaced click should not throw away what you were looking at. */
+        overlay.addEventListener('click', function (event) {
+            if (event.target === overlay || event.target === surface) {
+                closeViewer();
+            }
+        }, false);
+
+        viewer = {overlay: overlay, image: image, close: close, restoreFocus: document.activeElement};
+
+        window.addEventListener('keydown', onViewerKeyDown, true);
+        document.body.appendChild(overlay);
+        document.body.classList.add('drawio-viewer-open');
+        close.focus();
+    }
+
+    function closeViewer() {
+        if (viewer === null) {
+            return;
+        }
+
+        var current = viewer;
+        viewer = null;
+
+        window.removeEventListener('keydown', onViewerKeyDown, true);
+        current.overlay.remove();
+        document.body.classList.remove('drawio-viewer-open');
+
+        if (current.restoreFocus && typeof current.restoreFocus.focus === 'function') {
+            current.restoreFocus.focus();
+        }
+    }
+
+    /**
+     * Fit to the viewport, or the diagram's own size inside a scrolling surface.
+     *
+     * Fitting is the default because scaling vector art up is lossless and a small diagram
+     * should fill the screen. It is the wrong answer for a very wide one, where fitting
+     * shrinks the text again — hence the toggle.
+     */
+    function toggleActualSize() {
+        if (viewer !== null) {
+            viewer.image.classList.toggle('drawio-viewer-image-actual');
+        }
+    }
+
+    function onViewerKeyDown(event) {
+        if (viewer === null) {
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            /* Stop Kanboard from also closing the modal underneath us. */
+            event.stopPropagation();
+            event.preventDefault();
+            closeViewer();
+            return;
+        }
+
+        /* The dialog holds exactly one focusable control, so keeping focus inside it is
+         * keeping it on that control. */
+        if (event.key === 'Tab') {
+            event.preventDefault();
+            viewer.close.focus();
         }
     }
 

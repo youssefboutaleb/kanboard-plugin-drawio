@@ -96,11 +96,11 @@ var KBDrawioMarkdown = (function () {
                      * payload, so the block renders — but the region cannot be
                      * rewritten without touching something other than the
                      * payload, so the fence is marked unwritable rather than
-                     * normalised. */
-                    /* The empty string after a document's final newline is an
-                     * artifact of splitting, not a line the user wrote, so it
-                     * must not condemn an unterminated quoted fence. A blank
-                     * line anywhere else is real, and does end a blockquote. */
+                     * normalised.
+                     *
+                     * The exception is the empty string after a document's final
+                     * newline: an artifact of splitting rather than a line anyone
+                     * wrote, and it must not condemn an unterminated quoted fence. */
                     var trailingEof = i === lines.length - 1 && text === '';
 
                     if (stripped !== null && !trailingEof && stripped.depth < open.quoteDepth) {
@@ -135,7 +135,7 @@ var KBDrawioMarkdown = (function () {
             match = QUOTE_MARKER.exec(text);
         }
 
-        return { text: text, depth: depth };
+        return {text: text, depth: depth};
     }
 
     function finalize(fence) {

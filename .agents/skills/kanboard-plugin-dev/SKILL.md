@@ -105,7 +105,16 @@ Run through this before declaring any task complete.
         real markup.
 22. [ ] Any new parser assumption added to `test/fixtures/markdown-cases.json` and the
         expectations regenerated with `test/parsedown-parity.php` against a real checkout.
-23. [ ] `bash scripts/agent-verify.sh` green.
+23. [ ] Anything a reader without edit rights can see checked in `test/public-view.test.js`,
+        which runs the plugin over a real captured public page with `KB` undefined
+        (regenerate it with `bash test/capture-public-view.sh` after a Kanboard upgrade).
+24. [ ] Any new colour or surface in `Asset/css/drawio.css` expressed as a Kanboard theme
+        token with a fallback, and asserted in `test/theme.test.js` — jsdom parses the real
+        stylesheet, but cannot resolve `var()` or compute `::before`, so pseudo-element
+        declarations are read from the parsed rule and colours are written as longhands.
+25. [ ] A version bump reflected in `Plugin.php`, `CHANGELOG.md`, `package.json` **and**
+        the dossier — `test/release-metadata.test.js` fails the build if one drifts.
+26. [ ] `bash scripts/agent-verify.sh` green.
 
 ## 4. Verifying an Assumption About Core
 

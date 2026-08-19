@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 — 2026-08-19
 
 * Diagrams inside a blockquote can now be edited. The payload is rewritten with
   the quote prefix the fence already had — `> `, `> > `, `>` and indented

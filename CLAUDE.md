@@ -159,10 +159,12 @@ the design looks the way it does.
       files, download URL returns 200, 0 downloads so far). **The `plugins.json` PR is still
       open work** — see Milestone 4 Task 21.
 
-### Milestone 4: Read-path correctness, honest documentation, directory listing (IN PROGRESS)
+### Milestone 4: Read-path correctness, honest documentation, directory listing (AGENT WORK COMPLETE — v0.2.0 prepared, awaiting tag)
 
-Sequencing: **20 → 22 → 24 done**; `v0.1.1` published with the documentation correction.
-Remaining: **27** (housekeeping), then cut **v0.2.0**.
+Sequencing: **20 → 22 → 24 → 23 → 27 done.** `v0.1.1` is published; `v0.2.0` is prepared and
+waiting for a tag. Everything that remains is maintainer work: tag `v0.2.0`, run the manual
+matrix (the `docs/MANUAL_TESTING.md` §4 verdict table is still blank, and M-10 to M-12 have
+never been exercised in a browser), then open the `plugins.json` pull request — **Task 21**.
 
 **21 is independent of that.** The dossier is ready and points at `v0.1.1`, so the directory
 pull request can be opened now; waiting for `v0.2.0` instead only means re-pointing §7/§8/§10
@@ -199,7 +201,7 @@ Maintainer's choice — it is not a technical dependency either way.
     (Docker; seeds through JSON-RPC, strips `filemtime()` cache-busting and `colorCss()`).
     It also pins the Kanboard-side precondition: the first test fails loudly if a
     regenerated page no longer carries the plugin's assets.
-- [~] **Task 21: List the plugin in the directory (as `v0.1.1`)** — preparation complete, one
+- [~] **Task 21: List the plugin in the directory (as `v0.2.0`)** — preparation complete, one
       maintainer decision outstanding (7 tests, suite 67 → 74).
   - **The premise changed while preparing it.** `v0.1.0` turned out to be *already
     published* — tag, release and asset all exist as of 2026-08-18 19:34, built by the CI
@@ -227,11 +229,12 @@ Maintainer's choice — it is not a technical dependency either way.
     `v0.1.0` stays published — nothing about it is unsafe, one paragraph of its README is
     wrong — and is explicitly *not* re-uploaded, because Kanboard's installer keys updates
     off the version number and same-version-different-contents is invisible to it.
-  - Remaining, maintainer-only: commit, `git tag v0.1.1 && git push origin main --tags`
-    (CI builds and attaches the asset), confirm the §8 URL returns 200, fill the still-blank
-    verdict table in `docs/MANUAL_TESTING.md` §4, and open the PR — title and body drafted
-    in dossier §12–13, insertion point between `DiscordNotifier` and `duedate` re-verified
-    against the live file today.
+  - **Superseded by the v0.2.0 cut (Task 27).** `v0.1.1` was published on 2026-08-18 but
+    never submitted, and the dossier now points at `v0.2.0` instead — there is no reason to
+    list a version two features behind. Remaining, maintainer-only: tag `v0.2.0`, confirm
+    the §8 URL returns 200, work through `docs/MANUAL_TESTING.md` (the §4 verdict table is
+    still blank and M-10 to M-12 have never run in a browser), then open the PR — title and
+    body drafted in dossier §12–13.
 - [x] **Task 22: Edit a diagram inside a blockquote**
       (`docs/specs/003-quoted-diagram-editing.md`, 14 tests, suite 74 → 88).
   - **The risk was not the one the plan named.** Lazy continuation turned out to be a
@@ -315,11 +318,26 @@ Maintainer's choice — it is not a technical dependency either way.
     legibility surface is uncontested; a test now pins exactly that split.
   - `docs/MANUAL_TESTING.md` M-11 covers what no unit test can — light, dark and auto, with
     a transparent diagram and one carrying its own background.
-- [ ] **Task 27: Housekeeping before the v0.2.0 cut.** The brace-style outlier in
-      `stripQuoteMarkers()` (`{ text: text, depth: depth }`, against the spacing every other
-      literal in the file uses) shipped in `v0.1.1`; normalise it or adopt it deliberately,
-      but stop leaving it ambiguous. Keep the test count in this file tied to `npm test`
-      output, and re-run `bash test/capture-public-view.sh` if Kanboard has moved on.
+- [x] **Task 27: Housekeeping and the v0.2.0 cut** (no new tests; suite steady at 108).
+  - The brace-style outlier is settled by counting rather than opinion: four inline object
+    literals across the three scripts use no inner spaces, one used them. Normalised the
+    one. Also merged two comment blocks in `findFences()` that had been left stacked.
+  - `.agents/skills/kanboard-plugin-dev/SKILL.md` gained the three checks the suite grew
+    since it was written — read-only surfaces (`test/public-view.test.js` and the capture
+    script), theme tokens in CSS (`test/theme.test.js`, with jsdom's limits spelled out),
+    and version-bump agreement (`test/release-metadata.test.js`).
+  - **Checked rather than assumed**: Kanboard is still on `v1.2.53` (released 2026-07-24),
+    so `test/fixtures/public-task.html` and the Parsedown expectations need no regeneration;
+    and every `test/*.test.js` on disk is wired into `npm test` — no test was silently
+    orphaned by the last three tasks.
+  - **v0.2.0 prepared**: `Plugin::getPluginVersion()`, `package.json`, `CHANGELOG.md`
+    (Unreleased → `0.2.0 — 2026-08-19`) and dossier §4/§7/§8/§10/§13/§14 moved together,
+    with the directory blurb updated to mention the viewer.
+  - **The packaged artifact was installed, not just built** (lesson 20): `dist/Drawio-0.2.0.zip`
+    extracted into a clean `kanboard/kanboard:v1.2.53` lists under **Installed Plugins** —
+    not the incompatible table — as *Drawio · Youssef BOUTALEB · 0.2.0*, with the CSP
+    directive present, all four assets returning 200, thirteen meta tags rendered and no PHP
+    error in the log.
 
 ### Backlog (unscheduled)
 

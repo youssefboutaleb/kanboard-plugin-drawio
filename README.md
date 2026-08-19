@@ -34,14 +34,23 @@ only place a diagram ever lives.
 
 ## Demo
 
-<video src="docs/demo.mp4" controls autoplay loop muted playsinline width="100%"></video>
+<!-- This must stay a bare GitHub attachment link on a line of its own: that is the only
+     form github.com turns into an inline video player. Do not "fix" it into a <video> tag
+     or a relative path to docs/screenrecorders/demo.mp4 — GitHub's HTML sanitizer removes
+     <video> outright, leaving an empty gap where the demo should be. -->
 
-| Timestamp | Step | Description |
+https://github.com/user-attachments/assets/796ad8ad-48a1-40c5-b97b-ac75f9291dc4
+
+The recording also lives in the
+repository at [`docs/screenrecorders/demo.mp4`](docs/screenrecorders/demo.mp4).
+
+| Time | Step | What happens |
 |---|---|---|
-| [**`0:00`**](docs/demo.mp4#t=0) | **Step 1: Insert** | Click Markdown toolbar button $\rightarrow$ open draw.io $\rightarrow$ draw and save |
-| [**`0:20`**](docs/demo.mp4#t=20) | **Step 2: Render & Enlarge** | View rendered diagram $\rightarrow$ open Full-Size Viewer |
-| [**`0:24`**](docs/demo.mp4#t=24) | **Step 3: Edit in Place** | Click *Edit diagram* $\rightarrow$ modify shapes $\rightarrow$ instant update |
-| [**`0:32`**](docs/demo.mp4#t=32) | **Overview Complete** | Summary of the workflow |
+| `0:00` | **1 · Insert** | Click the Markdown toolbar button → draw.io opens → draw and save |
+| `0:20` | **2 · Render and enlarge** | The diagram renders inline → open the full-size viewer |
+| `0:24` | **3 · Edit in place** | *Edit diagram* → modify shapes → the block updates immediately |
+| `0:32` | **Recap** | The whole workflow end to end |
+
 
 ## Requirements
 

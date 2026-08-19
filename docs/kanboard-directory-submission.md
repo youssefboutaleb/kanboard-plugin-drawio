@@ -167,34 +167,40 @@ generated from `plugins.json`.
 
 ## 13. Pull request description
 
-```markdown
+Fenced with four backticks: the body itself contains a ` ```diagram ` fence, which would
+otherwise close a three-backtick block early — and truncate the description on the way to
+GitHub.
+
+````markdown
 Adds **Drawio** to the plugin directory.
 
 Draw.io diagrams inside Kanboard Markdown. A fenced ```diagram block renders as the
-diagram it describes, with an Edit action, and the Markdown toolbar gains an Insert
-diagram button that opens the draw.io editor.
+diagram it describes, with a **View full size** action for every reader and an **Edit**
+action wherever Kanboard already offers one, and the Markdown toolbar gains an **Insert
+diagram** button that opens the draw.io editor.
 
 - **Repository:** https://github.com/youssefboutaleb/kanboard-plugin-drawio
 - **Release:** https://github.com/youssefboutaleb/kanboard-plugin-drawio/releases/tag/v0.2.0
 - **License:** MIT
-- **Compatible with:** Kanboard >= 1.2.20 (requires PHP >= 8.1)
+- **Compatible with:** Kanboard >= 1.2.20 (requires PHP >= 8.1), verified against 1.2.53
 
 Notes for reviewers:
 
 - The download URL is a purpose-built release asset, not a GitHub source archive, so it
-  extracts to `Drawio/` as the installer expects. `remote_install` is `true`.
+  extracts to `Drawio/` as the installer expects. `remote_install` is `true`; the packaged
+  archive was installed into a clean 1.2.53 and lists as *Drawio 0.2.0* under Extensions.
 - No database schema, no migrations, no routes, no controllers, and no Kanboard core files
   are modified. The Markdown field is the only storage, so disabling the plugin leaves
   existing content untouched.
 - The plugin adds exactly one CSP directive, `frame-src 'self' https://embed.diagrams.net`,
   merged into the existing rules rather than replacing them. `DRAWIO_EMBED_URL` points it
-  at a self-hosted draw.io instead.
+  at a self-hosted draw.io instead, and a relative URL adds no third-party origin at all.
 - Diagrams render as `<img src="data:image/svg+xml;base64,…">`, never as inline SVG, so a
   hostile payload cannot execute script.
 - No third-party code is bundled. CI runs the test suite and `php -l`.
 - Entry inserted case-insensitively between `DiscordNotifier` and `duedate`;
   `plugins.json` validates as strict JSON.
-```
+````
 
 ## 14. Maintainer considerations
 

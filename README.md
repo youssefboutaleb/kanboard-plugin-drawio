@@ -32,6 +32,17 @@ only place a diagram ever lives.
 | **Insert** | The Markdown editor toolbar gets an *Insert diagram* button that opens draw.io and writes a new fence at the cursor. |
 | **Interoperate** | The payload is byte-for-byte the format [Wiki.js](https://js.wiki) uses, so diagrams move between the two in either direction. |
 
+## Demo
+
+<video src="docs/demo.mp4" controls autoplay loop muted playsinline width="100%"></video>
+
+| Timestamp | Step | Description |
+|---|---|---|
+| [**`0:00`**](docs/demo.mp4#t=0) | **Step 1: Insert** | Click Markdown toolbar button $\rightarrow$ open draw.io $\rightarrow$ draw and save |
+| [**`0:20`**](docs/demo.mp4#t=20) | **Step 2: Render & Enlarge** | View rendered diagram $\rightarrow$ open Full-Size Viewer |
+| [**`0:24`**](docs/demo.mp4#t=24) | **Step 3: Edit in Place** | Click *Edit diagram* $\rightarrow$ modify shapes $\rightarrow$ instant update |
+| [**`0:32`**](docs/demo.mp4#t=32) | **Overview Complete** | Summary of the workflow |
+
 ## Requirements
 
 - Kanboard **1.2.20** or later (verified against 1.2.53)

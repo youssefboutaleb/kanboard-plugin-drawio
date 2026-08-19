@@ -134,9 +134,16 @@ only the on-disk format is shared.
 
 ## Limitations
 
-- A diagram inside a blockquote (what replying to a comment produces) renders,
-  but cannot be edited in place — rewriting a quoted block's payload would have
-  to re-quote it, and a half-rewritten quote is worse than a refusal.
+- A diagram inside a blockquote (what replying to a comment produces) renders and
+  can be edited: the payload is rewritten with the quote prefix it already had,
+  so `> `, `> > ` and `>` all survive unchanged, and editing a quotation asks for
+  confirmation first. Two shapes are still refused, because rewriting them would
+  change more than the payload — a fence whose payload line is not itself quoted
+  (lazy continuation), and one broken by a blank line, which ends the blockquote
+  and would otherwise see two quotes silently merged into one.
+- Inserting a *new* diagram while the cursor is inside a blockquote writes an
+  unquoted fence, which ends the quote. Editing an existing quoted diagram is
+  unaffected.
 - A `~~~diagram` fence works here and renders in Wiki.js, but Wiki.js only offers
   to edit blocks opened with three backticks. The plugin rewrites the payload and
   nothing else, so a tilde fence stays a tilde fence — converting it would change

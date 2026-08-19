@@ -199,7 +199,7 @@
     function editInTextarea(textarea, index, payload, pre) {
         var fence = KBDrawioMarkdown.locateDiagram(textarea.value, index, payload);
 
-        if (!isWritable(fence)) {
+        if (!isWritable(fence) || !confirmQuotedEdit(fence)) {
             return;
         }
 
@@ -225,7 +225,12 @@
             return;
         }
 
-        replaceRange(textarea, fence.contentStart, fence.contentEnd, newPayload + '\n');
+        replaceRange(
+            textarea,
+            fence.contentStart,
+            fence.contentEnd,
+            KBDrawioMarkdown.fenceReplacement(fence, newPayload)
+        );
         refreshRendered(pre, newPayload);
     }
 
@@ -304,9 +309,11 @@
      * Whether a located fence may be written back.
      *
      * A diagram inside a blockquote — what a reply to a comment produces, since
-     * TextHelper::reply() prefixes every line with "> " — still renders, but
-     * replacing its payload would have to re-quote the new one, and a half
-     * rewritten quote is worse than a refusal.
+     * TextHelper::reply() prefixes every line with "> " — is editable as long as
+     * its payload region is entirely inside the quote, because then the region
+     * can be replaced by one quoted line and nothing else moves. When it is not,
+     * rewriting would delete a blank line or absorb an unquoted one, so the
+     * plugin refuses instead of normalising the user's document.
      */
     function isWritable(fence) {
         if (fence === null) {
@@ -314,12 +321,23 @@
             return false;
         }
 
-        if (fence.quoted) {
-            window.alert(label('quoted', 'This diagram is inside a quoted block and cannot be edited here.'));
+        if (!KBDrawioMarkdown.isWritableFence(fence)) {
+            window.alert(label('quoted', 'This diagram is inside a quoted block that is not consistently quoted, so editing it here could damage the quotation.'));
             return false;
         }
 
         return true;
+    }
+
+    /**
+     * Editing a quoted diagram rewrites a quotation — words attributed to
+     * someone else. It is the only successful edit in the plugin that changes
+     * text the user did not write, so it is worth one confirmation.
+     */
+    function confirmQuotedEdit(fence) {
+        return !fence.quoted || window.confirm(
+            label('quotedConfirm', 'This diagram is inside a quoted block. Editing it changes the quotation. Continue?')
+        );
     }
 
     function withinBudget(payload) {

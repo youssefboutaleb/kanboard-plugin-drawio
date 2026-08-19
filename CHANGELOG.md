@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+* Diagrams inside a blockquote can now be edited. The payload is rewritten with
+  the quote prefix the fence already had — `> `, `> > `, `>` and indented
+  variants are all reproduced verbatim — and editing a quotation asks for
+  confirmation first. A fence whose payload line is not itself quoted, or one
+  broken by a blank line, is still refused: rewriting either would change the
+  document's structure rather than just its payload.
+* Diagrams stay legible on Kanboard's dark theme. A diagram whose own background
+  is transparent used to be dark strokes on `#222`; every diagram now renders on
+  a constant light surface, in every theme, so it looks the same wherever it is
+  read. The plugin's own placeholder and error colours follow Kanboard's theme
+  variables instead of being fixed to the light theme's values, and the editor
+  backdrop matches the page rather than flashing white.
+
 ## 0.1.1 — 2026-08-18
 
 Documentation only. No change to the plugin's code, its stored format, or its

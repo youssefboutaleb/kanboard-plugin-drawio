@@ -180,3 +180,121 @@ test('a round trip through insert and replace is stable', () => {
     assert.strictEqual(md.findDiagrams(updated)[0].payload, B);
     assert.ok(updated.startsWith('doc\n'));
 });
+
+/* ------------------------------------------------------- quoted diagrams */
+
+/**
+ * A reply to a comment holding a diagram is the common way a quoted fence
+ * appears: TextHelper::reply() prefixes every line with "> ". The payload region
+ * of such a fence can be replaced by one quoted line, so it is editable; a fence
+ * whose region also covers lines outside the quote is not. See
+ * docs/specs/003-quoted-diagram-editing.md.
+ */
+function quoted(payload, prefix) {
+    const mark = prefix || '> ';
+    return mark + '```diagram\n' + mark + payload + '\n' + mark + '```';
+}
+
+test('a quoted diagram is writable and keeps its "> " prefix', () => {
+    const source = 'Alice wrote:\n' + quoted(A) + '\n';
+    const fenceA = md.locateDiagram(source, 0, A);
+
+    assert.strictEqual(md.isWritableFence(fenceA), true);
+    assert.strictEqual(md.replacePayload(source, fenceA, B), 'Alice wrote:\n' + quoted(B) + '\n');
+});
+
+test('a nested "> > " prefix is reproduced verbatim', () => {
+    const source = quoted(A, '> > ') + '\n';
+    const fenceA = md.locateDiagram(source, 0, A);
+
+    assert.strictEqual(fenceA.quotePrefix, '> > ');
+    assert.strictEqual(md.replacePayload(source, fenceA, B), quoted(B, '> > ') + '\n');
+});
+
+test('a ">" marker with no space keeps its exact form', () => {
+    const source = quoted(A, '>') + '\n';
+    const fenceA = md.locateDiagram(source, 0, A);
+
+    assert.strictEqual(fenceA.quotePrefix, '>');
+    assert.strictEqual(md.replacePayload(source, fenceA, B), quoted(B, '>') + '\n');
+});
+
+test('an indented quote keeps its indentation', () => {
+    const source = quoted(A, '   > ') + '\n';
+    const fenceA = md.locateDiagram(source, 0, A);
+
+    assert.strictEqual(fenceA.quotePrefix, '   > ');
+    assert.strictEqual(md.replacePayload(source, fenceA, B), quoted(B, '   > ') + '\n');
+});
+
+test('an unterminated quoted fence is written to the end of the document', () => {
+    const source = '> ```diagram\n> ' + A + '\n';
+    const fenceA = md.locateDiagram(source, 0, A);
+
+    assert.strictEqual(md.isWritableFence(fenceA), true);
+    assert.strictEqual(md.replacePayload(source, fenceA, B), '> ```diagram\n> ' + B + '\n');
+});
+
+test('a lazy continuation line makes the fence non-writable', () => {
+    // Parsedown still reads the payload, so the diagram renders — but the
+    // payload region covers a line that is not inside the quote.
+    const source = '> ```diagram\n' + A + '\n> ```\n';
+    const fenceA = md.locateDiagram(source, 0, A);
+
+    assert.strictEqual(fenceA.payload, A, 'the block is still found and rendered');
+    assert.strictEqual(md.isWritableFence(fenceA), false);
+});
+
+test('a blank line inside a quoted fence makes it non-writable', () => {
+    // Parsedown ends the blockquote at the blank line, so writing over the
+    // region would delete that line and merge two blockquotes into one.
+    const source = '> ```diagram\n> ' + A + '\n\n> ```\n';
+    const fenceA = md.locateDiagram(source, 0, A);
+
+    assert.strictEqual(fenceA.payload, A);
+    assert.strictEqual(md.isWritableFence(fenceA), false);
+});
+
+test('editing a quoted diagram leaves every other byte untouched', () => {
+    const before = '# Thread\n\nBob wrote:\n';
+    const after = '\n\nMy reply, with #42 and @alice.\n';
+    const source = before + quoted(A) + after;
+
+    const fenceA = md.locateDiagram(source, 0, A);
+    const result = md.replacePayload(source, fenceA, B);
+
+    assert.ok(result.startsWith(before));
+    assert.ok(result.endsWith(after));
+    assert.strictEqual(result, before + quoted(B) + after);
+});
+
+test('editing a quoted diagram does not disturb an unquoted one after it', () => {
+    const source = quoted(A) + '\n\n' + fence(A) + '\n';
+
+    const first = md.locateDiagram(source, 0, A);
+    const result = md.replacePayload(source, first, B);
+
+    assert.strictEqual(result, quoted(B) + '\n\n' + fence(A) + '\n');
+    assert.deepStrictEqual(md.findDiagrams(result).map(d => d.payload), [B, A]);
+    assert.deepStrictEqual(md.findDiagrams(result).map(d => d.quoted), [true, false]);
+});
+
+test('a quoted edit round-trips: the result tokenizes the same way', () => {
+    const source = 'q:\n' + quoted(A) + '\n';
+    const edited = md.replacePayload(source, md.locateDiagram(source, 0, A), B);
+    const again = md.locateDiagram(edited, 0, B);
+
+    assert.notStrictEqual(again, null);
+    assert.strictEqual(again.quoted, true);
+    assert.strictEqual(again.quotePrefix, '> ');
+    assert.strictEqual(md.isWritableFence(again), true);
+    assert.strictEqual(md.replacePayload(edited, again, A), source);
+});
+
+test('an unquoted fence gets no prefix, whatever the document around it', () => {
+    const source = '> a quote\n\n' + fence(A) + '\n';
+    const fenceA = md.locateDiagram(source, 0, A);
+
+    assert.strictEqual(fenceA.quoted, false);
+    assert.strictEqual(md.fenceReplacement(fenceA, B), B + '\n');
+});

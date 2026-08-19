@@ -22,7 +22,7 @@ pre:has(> code.language-diagram) {
 pre:has(> code.language-diagram)::before {
     content: "\25C7  draw.io diagram";
     display: block;
-    color: #777;
+    color: var(--color-light, #777);
     font-size: 0.9em;
 }
 
@@ -32,7 +32,7 @@ pre.drawio-diagram-source::before {
 
 pre[data-drawio-error]::before {
     content: attr(data-drawio-error);
-    color: #b94a48;
+    color: var(--color-error, #b94a48);
 }
 
 .drawio-diagram {
@@ -41,10 +41,33 @@ pre[data-drawio-error]::before {
     max-width: 100%;
 }
 
+/* A constant, opaque surface under every diagram.
+ *
+ * Kanboard's dark theme puts the page background at #222, and a draw.io export
+ * whose own background is transparent is dark strokes on nothing: invisible.
+ * Whether a given payload carries a background is the diagram author's choice —
+ * the plugin sends no `background` to draw.io's exporter and never parses the
+ * payload to find out — so the surface is a constant rather than something
+ * inferred, and it is applied in every theme so a diagram looks the same
+ * wherever it is read.
+ *
+ * The theme cannot be detected in CSS: Kanboard swaps whole stylesheets and only
+ * its "auto" theme follows prefers-color-scheme, so a media query would leave
+ * the explicit dark theme unfixed. See docs/specs/004-dark-theme-legibility.md.
+ *
+ * box-sizing is set explicitly because Kanboard has no global border-box reset,
+ * and without it the padding would push a full-width diagram past its column. */
 .drawio-diagram-image {
     display: block;
     max-width: 100%;
     height: auto;
+    box-sizing: border-box;
+    background-color: #ffffff;
+    padding: 0.5em;
+    border-width: 1px;
+    border-style: solid;
+    border-color: var(--color-lighter, #dedede);
+    border-radius: 3px;
 }
 
 .drawio-diagram-actions {
@@ -74,7 +97,9 @@ pre[data-drawio-error]::before {
     /* Above Kanboard's modal (100), its dropdowns and suggest menus (1000),
      * and its alerts (9999) — the editor takes the whole screen. */
     z-index: 10000;
-    background: #ffffff;
+    /* Visible only until draw.io paints; matching the page keeps a dark install
+     * from flashing white. */
+    background-color: var(--body-background-color, #ffffff);
 }
 
 .drawio-editor-frame {

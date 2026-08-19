@@ -51,7 +51,7 @@ the design looks the way it does.
 - [x] **Task 6: Implement deterministic block identification** — ordinal, confirmed
   against the loaded payload, with an unambiguous-payload fallback and a refusal
   otherwise. Nothing is added to the Markdown.
-- [x] **Task 7: Test suite (51 tests at the time; 74 today — the count comes from `npm test`)**
+- [x] **Task 7: Test suite (51 tests at the time; 98 today — the count comes from `npm test`)**
   - **Root cause found by the parity fixtures**: blockquoted fences are diagram blocks to
     Parsedown (`TextHelper::reply()` prefixes every line with `> `) but were invisible to
     the JavaScript tokenizer, which silently shifted every ordinal after them. Fixed by
@@ -161,9 +161,23 @@ the design looks the way it does.
 
 ### Milestone 4: Read-path correctness, honest documentation, directory listing (IN PROGRESS)
 
-Sequencing: **20 → 21 → 27** ships the plugin with correct documentation (still v0.1.0 —
-nothing is tagged yet). Then **22 → 24 → 26 → 23** as v0.2.0, with 22 first because it is
-the only item that touches the write path. **25 is a decision, not work.**
+Sequencing: **20 → 22 → 24 done**; `v0.1.1` published with the documentation correction.
+Remaining: **23** (the last feature) and **27** (housekeeping), then cut **v0.2.0**.
+
+**21 is independent of that.** The dossier is ready and points at `v0.1.1`, so the directory
+pull request can be opened now; waiting for `v0.2.0` instead only means re-pointing §7/§8/§10
+at the new version, which `test/release-metadata.test.js` would catch if it were forgotten.
+Maintainer's choice — it is not a technical dependency either way.
+
+**Out of scope, decided 2026-08-19 by the maintainer** — do not re-propose:
+
+- **Server-side rendering for notification emails.** A diagram stays a code block in mail.
+  (For the record, had it been wanted: seven notification templates render
+  `$this->text->markdown(…, true)`, `Core\Mail\Client::send()` offers no filter hook, and
+  the transports carry no attachments, so the ceiling was a text placeholder bought with
+  seven copied core templates.)
+- **Translations.** The plugin's nine `t()` strings stay English-only; no `Locale/`
+  directory, no catalogue loading.
 
 - [x] **Task 20: Correct the public/read-only surface claim and lock it with tests**
       (`docs/specs/002-public-read-only-surfaces.md`, 6 tests, suite 61 → 67).
@@ -218,46 +232,81 @@ the only item that touches the write path. **25 is a decision, not work.**
     verdict table in `docs/MANUAL_TESTING.md` §4, and open the PR — title and body drafted
     in dossier §12–13, insertion point between `DiscordNotifier` and `duedate` re-verified
     against the live file today.
-- [ ] **Task 22: Edit a diagram inside a blockquote.** Capture the opening line's exact
-      quote prefix as `fence.quotePrefix` and emit `prefix + payload + '\n'`; stop refusing
-      on `fence.quoted` in `isWritable()`, keeping the refusal for a prefix that cannot be
-      reproduced, and confirm before rewriting someone else's quotation. Risks in order:
-      **lazy continuation** (a quoted line may omit `>` and still belong to the quote —
-      mitigate with new fixtures regenerated through `test/parsedown-parity.php`), nested
-      `> > ` prefixes, and mixed per-line prefixes. Wiki.js's three-line invariant does not
-      apply inside a quote and must not be asserted there. ~10 new tests, 1 rewritten.
+- [x] **Task 22: Edit a diagram inside a blockquote**
+      (`docs/specs/003-quoted-diagram-editing.md`, 14 tests, suite 74 → 88).
+  - **The risk was not the one the plan named.** Lazy continuation turned out to be a
+    non-event: probing all eleven quoted shapes against the vendored Parsedown 1.7.4 showed
+    the tokenizer already agreed with it on every one, including lazy content and lazy
+    closing fences. The dangerous case was the one nobody had listed — a **blank line inside
+    a quoted fence**. Parsedown ends the blockquote there, so the trailing `> ``` ` is a
+    *second* blockquote; the tokenizer spans the whole thing as one fence. Both read the
+    same payload, so rendering was always right, but writing over that region would have
+    deleted the blank line and merged two blockquotes into one.
+  - The rule that fell out: **write only when every line of the payload region carries at
+    least the opening line's quote depth.** That admits exactly what `TextHelper::reply()`
+    produces and refuses both damaging shapes, without normalising anyone's document.
+  - `findFences()` now records `quotePrefix` — the markers *verbatim*, so `> `, `> > `, `>`
+    and `   > ` are reproduced rather than reconstructed — plus `quoteDepth` and
+    `lazyQuote`. `isWritableFence()` and `fenceReplacement()` are the pure predicates the UI
+    and the tests share, so the string asserted is the string written.
+  - **A bug the tests caught before it shipped**: the empty string after a document's final
+    newline is an artifact of `split('\n')`, not a line, and it was condemning every
+    unterminated quoted fence as lazy. Only a blank line that is *not* the synthetic last
+    element ends a quote.
+  - Editing a quotation now asks for confirmation once — the only successful edit in the
+    plugin that changes text the user did not write.
+  - Ten new parity fixtures regenerated through `test/parsedown-parity.php` against the real
+    Parsedown (31 cases total); the tokenizer agrees on all of them.
+  - Not in scope, now documented in the README: inserting a *new* diagram with the cursor
+    inside a blockquote still writes an unquoted fence, which ends the quote.
 - [ ] **Task 23: Full-size viewer overlay.** Not from the original backlog: Task 20
       established that read-only readers are a real audience with no affordance at all, and
       a diagram scaled to a comment column is often unreadable. Plugin-owned overlay, same
       `<img>`, no `KB` dependency, no new CSP directive. Watch the Escape-key contention
       with `KBDrawioEditor` and make sure refactoring `buildActions()` cannot leak an Edit
       link onto a public page. ~6 tests.
-- [ ] **Task 24: Dark-theme legibility.** Kanboard ships light/dark/auto
-      (`--body-background-color:#222`); a transparent draw.io export with dark strokes
-      degrades badly. Paper background on `.drawio-diagram-image`, and Kanboard's CSS
-      variables instead of the hardcoded `#777`/`#b94a48` in `drawio.css`. No automated
-      coverage is honest here — it lands as rows in `docs/MANUAL_TESTING.md`.
-- [ ] **Task 25 (decision only): server-side rendering for notification emails.** Seven
-      notification templates render `$this->text->markdown(…, true)`;
-      `Core\Mail\Client::send()` has no filter hook; `Core\Template::setTemplateOverride()`
-      (`app/Core/Template.php:94`) would let a plugin substitute them. But the transports
-      support no attachments and `data:` images are blocked by Gmail and Outlook, so the
-      ceiling is a text placeholder replacing a ≤55KB base64 block — bought with seven
-      copied core templates to re-verify every release. **Recommendation: record the ADR,
-      defer the implementation.**
-- [ ] **Task 26: Translations.** No `Locale/` exists; nine `t()` strings are English-only.
-      `Translator::load($lang, $dir)` (`app/Core/Translator.php:168`) merges, so a plugin
-      catalogue composes with core. `ASSUMPTION` to resolve first: that `initialize()` runs
-      where `getCurrentLanguage()` is meaningful — core loads its own catalogue later, from
-      `BootstrapSubscriber` on `app.bootstrap`. Verify live in French. Add a key-parity step
-      to `scripts/agent-verify.sh`.
-- [ ] **Task 27: Housekeeping.** The stray whitespace-only edit in
-      `Asset/js/drawio-markdown.js:113` (`{ text: text, depth: depth }` against the file's
-      own brace style) is still uncommitted and untouched — it is the maintainer's working
-      change, not this task's. Keep the test count in this file tied to `npm test` output.
+- [x] **Task 24: Dark-theme legibility**
+      (`docs/specs/004-dark-theme-legibility.md`, 10 tests, suite 88 → 98).
+  - **The theme cannot be detected, so the fix must not depend on detecting it.** Kanboard
+    picks a theme by loading one of `assets/css/{light,dark,auto}.min.css` — no `data-theme`,
+    no class — and only *auto* carries a `prefers-color-scheme` block. A media query would
+    therefore leave the explicit dark theme unfixed while adding a panel for explicit-light
+    users on a dark OS: wrong in the case that matters. Every diagram gets a constant opaque
+    surface instead, in all three themes.
+  - **Whether a payload has its own background is unknowable to the plugin.** draw.io's
+    embed `export` action takes a `background` parameter and the plugin sends none, so the
+    result is whatever the diagram's author configured. Asking for a white background at
+    export was rejected: it would bake the reader's theme into the stored artifact, change
+    it for Wiki.js, and do nothing for diagrams that already exist.
+  - `--color-light` and `--color-error` replace the hardcoded `#777`/`#b94a48`, which are
+    *exactly* the light theme's values for those tokens — so light rendering is unchanged
+    and dark now adapts. Every `var()` carries a fallback, and the plugin defines no custom
+    properties of its own. The editor backdrop follows `--body-background-color`.
+  - **Verified before it was written**: Kanboard sets `box-sizing` in only two rules and has
+    no global `border-box` reset, so padding on a `max-width: 100%` image would have pushed
+    diagrams past their column. The rule sets `box-sizing` explicitly and a test holds it.
+  - jsdom turned out to be able to carry more than expected: it parses the real stylesheet,
+    matches selectors and computes the surface. What it cannot do is resolve `var()` or
+    compute `::before` — so theme tokens are asserted from the parsed rule and colours are
+    written as longhands (a `var()` inside a `background` shorthand is invisible to it).
+    Mutation-checked: reverting the surface and the placeholder token fails three tests.
+  - **One cascade finding worth keeping**: `.markdown img { max-width: 80% }` has
+    specificity (0,1,1) and outranks the plugin's single class, so Kanboard — not the
+    plugin — decides how wide a diagram is, as it always has. It sets no background, so the
+    legibility surface is uncontested; a test now pins exactly that split.
+  - `docs/MANUAL_TESTING.md` M-11 covers what no unit test can — light, dark and auto, with
+    a transparent diagram and one carrying its own background.
+- [ ] **Task 27: Housekeeping before the v0.2.0 cut.** The brace-style outlier in
+      `stripQuoteMarkers()` (`{ text: text, depth: depth }`, against the spacing every other
+      literal in the file uses) shipped in `v0.1.1`; normalise it or adopt it deliberately,
+      but stop leaving it ambiguous. Keep the test count in this file tied to `npm test`
+      output, and re-run `bash test/capture-public-view.sh` if Kanboard has moved on.
 
 ### Backlog (unscheduled)
 
+- [ ] Inserting a new diagram while the cursor is inside a blockquote writes an unquoted
+      fence, which ends the quote. Editing an existing quoted diagram is unaffected
+      (Task 22); insertion would need the same prefix logic applied at the cursor's context.
 - [ ] Rendering a diagram inside the board tooltip is covered by the `MutationObserver`
       and the fragment does carry `code.language-diagram` (verified against
       `/board/tooltip/1/description`), but no test exercises that path.
@@ -269,7 +318,7 @@ the only item that touches the write path. **25 is a decision, not work.**
 ## 🛠️ Essential Commands & Agentic Scripts
 
 ```bash
-# Automated agent verification pipeline (JS syntax, PHP lint, 74 tests, packaging shape)
+# Automated agent verification pipeline (JS syntax, PHP lint, 98 tests, packaging shape)
 bash scripts/agent-verify.sh
 
 # Test suite only (node:test, jsdom is the only dev dependency)
@@ -407,3 +456,24 @@ Every task follows a 6-phase loop:
     `createComment`, `createUser` and `addProjectUser` (role `project-viewer`) with
     `-u admin:admin` set up the whole manual-test environment in five calls, including a
     task holding two identical diagrams — the fixture that catches wrong-block writes.
+22. **The public views already worked; the documentation was the defect.** `layout.php`
+    withholds `app.min.js` on `not_editable` pages but renders the plugin asset hooks
+    outside that guard, so a feature nobody had claimed was shipping untested. Check what a
+    page actually serves before writing a limitation into a README.
+23. **The dangerous quoted shape is a blank line, not lazy continuation.** Parsedown ends a
+    blockquote at a blank line, so `> ```diagram / > payload / (blank) / > ``` ` is *two*
+    blockquotes with an unterminated fence in the first. The tokenizer spans it as one
+    fence and reads the same payload — rendering is right — but writing over that region
+    deletes the blank line and merges the quotes. Payload agreement between parser and
+    tokenizer is necessary for reading and **not sufficient for writing**: a write also
+    needs the region to contain nothing but the payload.
+24. **`split('\n')` invents a last line.** The empty string after a document's final
+    newline is not something the user wrote, and treating it as one condemned every
+    unterminated quoted fence as unwritable. Any per-line rule needs to exclude it.
+25. **A stylesheet is testable, within limits worth knowing.** jsdom parses the real CSS,
+    matches selectors and computes ordinary declarations — but it does not resolve `var()`,
+    does not implement `getComputedStyle(el, '::before')`, and drops a `var()` that sits
+    inside a shorthand. Writing colours as longhands makes them assertable at all; the rest
+    is what a manual theme pass is for.
+26. **Kanboard has no global `box-sizing` reset.** Adding padding to anything with
+    `max-width: 100%` overflows its container unless the plugin sets `border-box` itself.

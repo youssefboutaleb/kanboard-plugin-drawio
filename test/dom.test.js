@@ -314,21 +314,84 @@ test('a payload over the storage budget is refused before it is written', async 
     assert.strictEqual(textarea.value, '```diagram\n' + A + '\n```\n');
 });
 
-test('a quoted diagram renders but is not editable in place', async () => {
-    const context = setup(editor('> ```diagram\n> ' + A + '\n> ```\n'));
-    const textarea = context.document.querySelector('textarea');
-    const alerts = [];
+/* --------------------------------------------------------- quoted diagrams */
 
-    context.window.alert = (message) => alerts.push(message);
+/**
+ * Replying to a comment quotes its diagram, because TextHelper::reply() prefixes
+ * every line with "> ". Such a fence is editable when its payload region is
+ * entirely inside the quote; see docs/specs/003-quoted-diagram-editing.md.
+ */
+async function quotedEditor(source) {
+    const context = setup(editor(source));
+
+    context.alerts = [];
+    context.confirms = [];
+    context.window.alert = (message) => context.alerts.push(message);
+    context.window.confirm = (message) => {
+        context.confirms.push(message);
+        return context.confirmAnswer !== false;
+    };
     context.document.querySelector('.text-editor-preview-area').innerHTML =
         `<blockquote>${block(A)}</blockquote>`;
     await context.frame();
+
+    return context;
+}
+
+test('a quoted diagram is editable, and the payload keeps its quote prefix', async () => {
+    const context = await quotedEditor('Bob wrote:\n> ```diagram\n> ' + A + '\n> ```\n');
+    const textarea = context.document.querySelector('textarea');
 
     assert.strictEqual(figures(context.document).length, 1);
 
     context.document.querySelector('.drawio-diagram-edit').click();
 
+    assert.strictEqual(context.confirms.length, 1, 'editing a quotation asks first');
+    assert.strictEqual(context.opened.length, 1);
+
+    context.opened[0].onSave(B);
+
+    assert.strictEqual(textarea.value, 'Bob wrote:\n> ```diagram\n> ' + B + '\n> ```\n');
+    assert.strictEqual(context.alerts.length, 0);
+});
+
+test('declining the confirmation writes nothing and opens no editor', async () => {
+    const context = await quotedEditor('> ```diagram\n> ' + A + '\n> ```\n');
+    const textarea = context.document.querySelector('textarea');
+
+    context.confirmAnswer = false;
+    context.document.querySelector('.drawio-diagram-edit').click();
+
+    assert.strictEqual(context.confirms.length, 1);
     assert.strictEqual(context.opened.length, 0);
-    assert.strictEqual(alerts.length, 1);
     assert.strictEqual(textarea.value, '> ```diagram\n> ' + A + '\n> ```\n');
+});
+
+test('a quoted fence broken by a blank line is refused, not normalised', async () => {
+    const source = '> ```diagram\n> ' + A + '\n\n> ```\n';
+    const context = await quotedEditor(source);
+    const textarea = context.document.querySelector('textarea');
+
+    assert.strictEqual(figures(context.document).length, 1, 'it still renders');
+
+    context.document.querySelector('.drawio-diagram-edit').click();
+
+    assert.strictEqual(context.opened.length, 0);
+    assert.strictEqual(context.confirms.length, 0, 'refused before asking');
+    assert.strictEqual(context.alerts.length, 1);
+    assert.strictEqual(textarea.value, source, 'the blank line and both quotes survive');
+});
+
+test('an unquoted diagram is edited without a confirmation', async () => {
+    const context = setup(editor('```diagram\n' + A + '\n```\n'));
+    const textarea = context.document.querySelector('textarea');
+
+    context.window.confirm = () => { throw new Error('should not ask'); };
+    context.document.querySelector('.text-editor-preview-area').innerHTML = block(A);
+    await context.frame();
+
+    context.document.querySelector('.drawio-diagram-edit').click();
+    context.opened[0].onSave(B);
+
+    assert.strictEqual(textarea.value, '```diagram\n' + B + '\n```\n');
 });

@@ -24,13 +24,15 @@ test('the tokenizer agrees with Parsedown on every fixture', () => {
     });
 });
 
-test('a quoted diagram is found but flagged as not editable in place', () => {
+test('a quoted diagram is found, flagged as quoted, and carries its prefix', () => {
     const source = '> ```diagram\n> QUFB\n> ```\n';
     const diagrams = md.findDiagrams(source);
 
     assert.strictEqual(diagrams.length, 1);
     assert.strictEqual(diagrams[0].payload, 'QUFB');
     assert.strictEqual(diagrams[0].quoted, true);
+    assert.strictEqual(diagrams[0].quotePrefix, '> ');
+    assert.strictEqual(md.isWritableFence(diagrams[0]), true);
 });
 
 test('a quoted diagram does not shift the ordinal of the ones after it', () => {

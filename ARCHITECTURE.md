@@ -186,8 +186,16 @@ This is sound only while the JavaScript tokenizer sees the same blocks Parsedown
 sees, so `test/fixtures/parsedown-expected.json` records Parsedown's actual
 output for the awkward cases — tilde fences, nested fences, indentation,
 unterminated fences, CRLF, blockquotes, an uppercase info string — and the suite
-asserts agreement. Blockquoted diagrams are counted (so ordinals stay right) but
-flagged non-writable.
+asserts agreement.
+
+Blockquoted diagrams are counted, so ordinals stay right, and they are editable:
+the tokenizer keeps the exact prefix consumed from the fence's opening line
+(`> `, `> > `, `>`, `   > `) and re-emits it when the payload is replaced, so
+depth in equals depth out. Two shapes are refused rather than normalised — a
+payload line that is not itself quoted, and a blank line inside the fence, which
+ends the blockquote in Parsedown and would see two quotes merged into one by a
+naive write. Both still render; only the write is refused
+(`docs/specs/003-quoted-diagram-editing.md`).
 
 ## Known dependencies on Kanboard
 
@@ -202,6 +210,8 @@ The whole surface the plugin depends on, in one place:
 | `.comment-actions a.js-modal-medium` | `Asset/js/drawio-ui.js` | A comment's Edit button disappears |
 | `KB.modal`, `KB.on('modal.afterRender')` | `Asset/js/drawio-ui.js` | Edit-from-view stops opening the form |
 | `template:layout:{head,css,js}` hooks | `Plugin.php` | The plugin stops loading |
+| Theme tokens `--color-light`, `--color-error`, `--color-lighter`, `--body-background-color` | `Asset/css/drawio.css` | Each falls back to the light theme's current value; nothing breaks |
+| `.markdown img { max-width: 80% }` outranking the plugin's class | `Asset/css/drawio.css` | Kanboard decides diagram width, as it did before; the legibility surface is unaffected |
 | Those hooks sitting outside `layout.php`'s `not_editable` guard | `app/Template/layout.php` | Diagrams stop rendering on public and read-only pages only |
 | `$container['cspRules']` shape | `Plugin.php` | The iframe is blocked by CSP |
 

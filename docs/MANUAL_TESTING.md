@@ -422,6 +422,64 @@ payload line and hands the SVG back to draw.io.
 three lines. A missing `mxfile` means the export format was not `xmlsvg` and the diagram is
 no longer editable by anyone.
 
+### M-10 — Quoted diagram (added in Milestone 4, Task 22)
+
+The suite stubs `window.confirm`; only a browser shows the real dialog and the real focus
+behaviour behind the draw.io overlay.
+
+1. On task 1, use **Reply** on the comment that holds a diagram. Kanboard prefills the reply
+   textarea with the comment quoted line by line — including the ` ```diagram ` fence.
+2. Save the reply, then click **Edit diagram** under the quoted copy.
+3. A confirmation appears: *"This diagram is inside a quoted block. Editing it changes the
+   quotation. Continue?"* Press **Cancel** first.
+4. Nothing should happen — no draw.io overlay, no change to the comment.
+5. Click **Edit diagram** again, **confirm**, change something, and save.
+6. Read the stored Markdown back and check the prefix survived:
+   ```bash
+   curl -s -u admin:admin -H 'Content-Type: application/json' \
+       -d '{"jsonrpc":"2.0","id":1,"method":"getAllComments","params":{"task_id":1}}' \
+       http://localhost:8080/jsonrpc.php | python3 -m json.tool | grep -c '> ```diagram'
+   ```
+
+**Pass** — every line of the quoted fence still begins with `> `, the payload changed, and
+the surrounding quoted text is untouched. **On failure** — a payload line that lost its
+`> ` marker means the quote was broken by the write, which is the one outcome this feature
+must never produce.
+
+Also worth one look: a quoted diagram whose fence is broken by a blank line should refuse
+with an explanation rather than writing anything.
+
+### M-11 — Themes (added in Milestone 4, Task 24)
+
+"Is this legible" is not a claim a unit test can make: jsdom does not resolve `var()`, so
+the suite can only prove the declarations are theme tokens. This case checks what they
+resolve to.
+
+Prepare two diagrams: one saved with draw.io's default (transparent) background, and one
+where a page background colour was set in the editor. Put both in task 1's description.
+
+Switch the theme under **My profile → Edit profile → Theme** and reload after each change:
+
+| Theme | Expect |
+|---|---|
+| Light | Both diagrams legible on a white panel with a hairline border. Nothing looks different from before this task. |
+| Dark | Both still legible: the transparent one keeps its white panel rather than vanishing into `#222`. |
+| Auto | Follows the OS setting; flip the OS between light and dark and confirm neither breaks. |
+
+Then, on the **dark** theme:
+
+1. The "◇ draw.io diagram" placeholder (visible for a moment before the image renders, or
+   permanently with JavaScript disabled) should be readable grey, not the light theme's
+   `#777` on `#222`.
+2. Break a payload deliberately — edit the task description and delete a few characters from
+   inside a fence — and confirm the error line is readable.
+3. Open the draw.io editor. The backdrop behind the frame should match the page while it
+   loads, with no white flash.
+
+**Pass** — no diagram is invisible in any theme, and no plugin text is unreadable against
+the page. **On failure** — a diagram that disappears on dark means the surface rule is not
+reaching the image; check that `.drawio-diagram-image` still carries the plugin's class.
+
 ---
 
 ## 3. DevTools protocol inspection guide
@@ -514,6 +572,8 @@ complete when every row has a verdict and a browser recorded.
 | M-07 Budget | | | |
 | M-08 Permissions | | | |
 | M-09 Wiki.js | | | |
+| M-10 Quoted diagram | | | |
+| M-11 Themes | | | |
 
 Run the matrix on at least one Chromium-based and one Gecko-based browser: the plugin uses
 `document.execCommand('insertText')` for undo-preserving writes with a `value` assignment

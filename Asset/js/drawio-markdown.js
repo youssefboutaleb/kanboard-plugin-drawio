@@ -65,6 +65,13 @@ var KBDrawioMarkdown = (function () {
                         length: match[1].length,
                         language: firstToken(match[2]),
                         quoted: unquoted.depth > 0,
+                        /* The markers exactly as they were written — "> ", ">",
+                         * "> > ", "   > ". Writing a payload back into a quoted
+                         * fence re-emits this verbatim, so depth in equals depth
+                         * out and nothing is re-quoted or un-quoted. */
+                        quotePrefix: text.slice(0, text.length - unquoted.text.length),
+                        quoteDepth: unquoted.depth,
+                        lazyQuote: false,
                         lines: [],
                         start: lineStart,
                         contentStart: Math.min(nextOffset, source.length)
@@ -73,7 +80,8 @@ var KBDrawioMarkdown = (function () {
             } else {
                 /* Only strip markers from a block that was opened inside a
                  * quote; elsewhere a leading ">" is code, not a marker. */
-                var content = open.quoted ? stripQuoteMarkers(text).text : text;
+                var stripped = open.quoted ? stripQuoteMarkers(text) : null;
+                var content = stripped === null ? text : stripped.text;
                 match = CLOSING_FENCE.exec(content);
 
                 if (match !== null && match[1].charAt(0) === open.char && match[1].length >= 3) {
@@ -82,6 +90,23 @@ var KBDrawioMarkdown = (function () {
                     fences.push(finalize(open));
                     open = null;
                 } else {
+                    /* A content line shallower than the opening line is not
+                     * inside the quote: a lazy continuation, or the blank line
+                     * that ends a blockquote entirely. Parsedown still reads the
+                     * payload, so the block renders — but the region cannot be
+                     * rewritten without touching something other than the
+                     * payload, so the fence is marked unwritable rather than
+                     * normalised. */
+                    /* The empty string after a document's final newline is an
+                     * artifact of splitting, not a line the user wrote, so it
+                     * must not condemn an unterminated quoted fence. A blank
+                     * line anywhere else is real, and does end a blockquote. */
+                    var trailingEof = i === lines.length - 1 && text === '';
+
+                    if (stripped !== null && !trailingEof && stripped.depth < open.quoteDepth) {
+                        open.lazyQuote = true;
+                    }
+
                     open.lines.push(content);
                 }
             }
@@ -175,10 +200,37 @@ var KBDrawioMarkdown = (function () {
         return matches.length === 1 ? matches[0] : null;
     }
 
+    /**
+     * Whether a located fence's payload region can be rewritten in place.
+     *
+     * An unquoted fence always can. A quoted one can when every line of its
+     * content region is inside the quote, so that replacing the region with a
+     * single quoted line changes the payload and nothing else. See
+     * `docs/specs/003-quoted-diagram-editing.md` for the shapes this refuses and
+     * why normalising them instead would damage the document.
+     */
+    function isWritableFence(fence) {
+        if (!fence) {
+            return false;
+        }
+
+        if (!fence.quoted) {
+            return true;
+        }
+
+        return !fence.lazyQuote && typeof fence.quotePrefix === 'string' && fence.quotePrefix !== '';
+    }
+
+    /** The exact text that replaces a fence's content region. */
+    function fenceReplacement(fence, payload) {
+        var prefix = fence && fence.quoted ? fence.quotePrefix : '';
+        return prefix + payload + '\n';
+    }
+
     /** Replace one fence's payload, leaving every other byte of the document untouched. */
     function replacePayload(source, fence, payload) {
         var tail = source.slice(fence.contentEnd);
-        return source.slice(0, fence.contentStart) + payload + '\n' + tail;
+        return source.slice(0, fence.contentStart) + fenceReplacement(fence, payload) + tail;
     }
 
     /** The Markdown block to write into a document. */
@@ -266,6 +318,8 @@ var KBDrawioMarkdown = (function () {
         findFences: findFences,
         findDiagrams: findDiagrams,
         locateDiagram: locateDiagram,
+        isWritableFence: isWritableFence,
+        fenceReplacement: fenceReplacement,
         replacePayload: replacePayload,
         buildFence: buildFence,
         insertFence: insertFence,
